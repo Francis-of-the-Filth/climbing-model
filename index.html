@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Climbing Gym Revenue Model</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: sans-serif; padding: 24px; background: #fff; color: #111; max-width: 760px; margin: 0 auto; }
+.sr-only { position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0) }
+.srow { margin-bottom:11px }
+.slbls { display:flex;justify-content:space-between;margin-bottom:3px;font-size:12px }
+.slbls span:first-child { color:#666 }
+.slbls span:last-child { font-weight:500;color:#111;font-size:12px }
+input[type=range] { width:100%;cursor:pointer }
+.sec { font-size:10px;font-weight:500;color:#666;letter-spacing:0.07em;text-transform:uppercase;margin:0 0 9px;border-bottom:0.5px solid #ddd;padding-bottom:5px }
+.mcard { background:#f5f5f5;border-radius:8px;padding:11px 13px }
+.mlbl { font-size:10px;color:#666;margin:0 0 2px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em }
+.mval { font-size:20px;font-weight:500;margin:0;color:#111 }
+h1 { font-size:16px;font-weight:500;color:#111;margin-bottom:1.25rem }
+</style>
+</head>
+<body>
+
+<h1>Climbing gym — revenue model</h1>
+
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:1.25rem">
+  <div class="mcard"><p class="mlbl">Monthly revenue</p><p class="mval" id="v-rev">—</p></div>
+  <div class="mcard"><p class="mlbl">Monthly net</p><p class="mval" id="v-net">—</p></div>
+  <div class="mcard"><p class="mlbl">Break-even</p><p class="mval" id="v-be">—</p></div>
+  <div class="mcard"><p class="mlbl">Year 1 net</p><p class="mval" id="v-yr">—</p></div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:1.25rem">
+  <div>
+    <p class="sec">Revenue drivers</p>
+    <div class="srow"><div class="slbls"><span>Members</span><span id="d-mem">80</span></div><input type="range" min="10" max="300" step="1" value="80" id="s-mem"></div>
+    <div class="srow"><div class="slbls"><span>Membership price (COP k/mo)</span><span id="d-mp">150k</span></div><input type="range" min="80" max="200" step="5" value="150" id="s-mp"></div>
+    <div class="srow"><div class="slbls"><span>Day passes / month</span><span id="d-dp">30</span></div><input type="range" min="0" max="150" step="5" value="30" id="s-dp"></div>
+    <div class="srow"><div class="slbls"><span>Day pass price (COP k)</span><span id="d-dpp">25k</span></div><input type="range" min="15" max="40" step="1" value="25" id="s-dpp"></div>
+    <div class="srow"><div class="slbls"><span>Courses / month</span><span id="d-c">2</span></div><input type="range" min="0" max="8" step="1" value="2" id="s-c"></div>
+    <div class="srow"><div class="slbls"><span>Students / course</span><span id="d-cs">8</span></div><input type="range" min="4" max="12" step="1" value="8" id="s-cs"></div>
+    <div class="srow"><div class="slbls"><span>Course price / student (COP k)</span><span id="d-cp">250k</span></div><input type="range" min="150" max="350" step="10" value="250" id="s-cp"></div>
+    <div class="srow"><div class="slbls"><span>Gear rental (COP M/mo)</span><span id="d-gr">0.5M</span></div><input type="range" min="0" max="3" step="0.1" value="0.5" id="s-gr"></div>
+  </div>
+  <div>
+    <p class="sec">Cost structure</p>
+    <div class="srow"><div class="slbls"><span>Fixed costs (COP M/mo)</span><span id="d-fc">8.0M</span></div><input type="range" min="6" max="15" step="0.5" value="8" id="s-fc"></div>
+    <div class="srow"><div class="slbls"><span>Build cost (COP M)</span><span id="d-bc">385M</span></div><input type="range" min="300" max="600" step="5" value="385" id="s-bc"></div>
+    <p class="sec" style="margin-top:14px">Pre-sale (Hormozi move)</p>
+    <div class="srow"><div class="slbls"><span>Founding members</span><span id="d-fm">0</span></div><input type="range" min="0" max="80" step="5" value="0" id="s-fm"></div>
+    <div class="srow"><div class="slbls"><span>Founding price (COP k upfront)</span><span id="d-fmp">500k</span></div><input type="range" min="300" max="700" step="50" value="500" id="s-fmp"></div>
+    <p class="sec" style="margin-top:14px">Revenue mix</p>
+    <div style="position:relative;height:140px;margin-bottom:6px">
+      <canvas id="bc"></canvas>
+    </div>
+    <div id="leg" style="display:flex;flex-wrap:wrap;gap:6px 12px;font-size:11px;color:#666"></div>
+  </div>
+</div>
+
+<p class="sec">24-month cumulative net (COP M) — 6-month ramp-up included</p>
+<div style="position:relative;width:100%;height:200px">
+  <canvas id="pc"></canvas>
+</div>
+
+<script>
+const g = id => document.getElementById(id);
+const C = { mem:'#1D9E75', dp:'#378ADD', course:'#EF9F27', gear:'#7F77DD', neg:'#E24B4A', warn:'#BA7517' };
+
+let bChart = new Chart(g('bc'), {
+  type:'doughnut',
+  data:{ labels:['Members','Day passes','Courses','Gear'], datasets:[{ data:[1,1,1,1], backgroundColor:[C.mem,C.dp,C.course,C.gear], borderWidth:0 }] },
+  options:{ responsive:true, maintainAspectRatio:false, cutout:'62%', plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c => ' $'+Math.round(c.parsed/1e6)+'M' } } } }
+});
+
+let pChart = new Chart(g('pc'), {
+  type:'line',
+  data:{
+    labels: Array.from({length:24},(_,i)=>'Mo '+(i+1)),
+    datasets:[
+      { label:'Cumulative net', data:Array(24).fill(0), borderColor:C.mem, backgroundColor:'rgba(29,158,117,0.07)', fill:true, tension:0.35, pointRadius:0, borderWidth:2 },
+      { label:'Break-even', data:Array(24).fill(0), borderColor:'rgba(226,75,74,0.35)', borderDash:[5,3], pointRadius:0, borderWidth:1.5, fill:false }
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    scales:{
+      x:{ grid:{color:'rgba(0,0,0,0.05)'}, ticks:{color:'#888',font:{size:10},maxTicksLimit:12} },
+      y:{ grid:{color:'rgba(0,0,0,0.05)'}, ticks:{color:'#888',font:{size:10},callback:v=>'$'+Math.round(v)+'M'} }
+    },
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c => ' $'+Math.round(c.parsed.y)+'M COP' } } }
+  }
+});
+
+function run() {
+  const v = {
+    mem:+g('s-mem').value, mp:+g('s-mp').value,
+    dp:+g('s-dp').value, dpp:+g('s-dpp').value,
+    c:+g('s-c').value, cs:+g('s-cs').value, cp:+g('s-cp').value,
+    gr:+g('s-gr').value, fc:+g('s-fc').value, bc:+g('s-bc').value,
+    fm:+g('s-fm').value, fmp:+g('s-fmp').value
+  };
+  const rMem=v.mem*v.mp*1e3, rDp=v.dp*v.dpp*1e3, rCourse=v.c*v.cs*v.cp*1e3, rGear=v.gr*1e6;
+  const totalRev=rMem+rDp+rCourse+rGear, costs=v.fc*1e6, netMo=totalRev-costs;
+  const netMoM=netMo/1e6, presale=v.fm*v.fmp*1e3, effBc=Math.max(0,v.bc*1e6-presale), yr1=netMoM*12;
+
+  g('v-rev').textContent='$'+Math.round(totalRev/1e6)+'M/mo';
+  g('v-net').textContent=(netMoM>=0?'+':'')+'$'+Math.round(netMoM)+'M/mo';
+  g('v-net').style.color=netMoM>=0?C.mem:C.neg;
+  g('v-yr').textContent=(yr1>=0?'+':'')+'$'+Math.round(yr1)+'M';
+  g('v-yr').style.color=yr1>=0?C.mem:C.neg;
+
+  let beText='∞', beColor=C.neg;
+  if(netMo>0){ const mo=Math.ceil(effBc/netMo); beText=mo+' mo'; beColor=mo<=24?C.mem:mo<=42?C.warn:C.neg; }
+  g('v-be').textContent=beText; g('v-be').style.color=beColor;
+
+  const bData=[rMem,rDp,rCourse,rGear];
+  bChart.data.datasets[0].data=bData; bChart.update('none');
+
+  const total=bData.reduce((a,b)=>a+b,0);
+  g('leg').innerHTML=['Members','Day passes','Courses','Gear'].map((l,i)=>{
+    const pct=total>0?Math.round(bData[i]/total*100):0;
+    return `<span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:8px;border-radius:1px;background:${[C.mem,C.dp,C.course,C.gear][i]};display:inline-block"></span>${l} ${pct}%</span>`;
+  }).join('');
+
+  const ramp=[0.25,0.40,0.55,0.68,0.80,0.90,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1];
+  let cum=-(effBc/1e6);
+  pChart.data.datasets[0].data=ramp.map(r=>{ cum+=(totalRev*r-costs)/1e6; return Math.round(cum*10)/10; });
+  pChart.data.datasets[0].borderColor=netMo>0?C.mem:C.neg;
+  pChart.data.datasets[0].backgroundColor=netMo>0?'rgba(29,158,117,0.07)':'rgba(226,75,74,0.07)';
+  pChart.update('none');
+}
+
+const map={'s-mem':['d-mem',v=>v],'s-mp':['d-mp',v=>v+'k'],'s-dp':['d-dp',v=>v],'s-dpp':['d-dpp',v=>v+'k'],'s-c':['d-c',v=>v],'s-cs':['d-cs',v=>v],'s-cp':['d-cp',v=>v+'k'],'s-gr':['d-gr',v=>parseFloat(v).toFixed(1)+'M'],'s-fc':['d-fc',v=>parseFloat(v).toFixed(1)+'M'],'s-bc':['d-bc',v=>v+'M'],'s-fm':['d-fm',v=>v],'s-fmp':['d-fmp',v=>v+'k']};
+Object.entries(map).forEach(([sid,[did,fmt]])=>{ const el=g(sid); el.addEventListener('input',()=>{ g(did).textContent=fmt(el.value); run(); }); });
+run();
+</script>
+</body>
+</html>

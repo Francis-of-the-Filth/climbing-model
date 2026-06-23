@@ -18,55 +18,106 @@ input[type=range] { width:100%;cursor:pointer }
 .mcard { background:#f5f5f5;border-radius:8px;padding:11px 13px }
 .mlbl { font-size:10px;color:#666;margin:0 0 2px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em }
 .mval { font-size:20px;font-weight:500;margin:0;color:#111 }
-h1 { font-size:16px;font-weight:500;color:#111;margin-bottom:1.25rem }
+.header { display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem }
+h1 { font-size:16px;font-weight:500;color:#111 }
+.lang-toggle { display:flex;border:1px solid #ddd;border-radius:6px;overflow:hidden }
+.lang-btn { padding:5px 14px;background:#fff;border:none;cursor:pointer;color:#666;font-size:12px;font-family:sans-serif }
+.lang-btn.active { background:#111;color:#fff }
+.lang-btn:hover:not(.active) { background:#f5f5f5 }
 </style>
 </head>
 <body>
 
-<h1>Climbing gym — revenue model</h1>
+<div class="header">
+  <h1 data-i18n="title">Climbing gym — revenue model</h1>
+  <div class="lang-toggle">
+    <button class="lang-btn active" id="btn-en" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" id="btn-es" onclick="setLang('es')">ES</button>
+  </div>
+</div>
 
 <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:1.25rem">
-  <div class="mcard"><p class="mlbl">Monthly revenue</p><p class="mval" id="v-rev">—</p></div>
-  <div class="mcard"><p class="mlbl">Monthly net</p><p class="mval" id="v-net">—</p></div>
-  <div class="mcard"><p class="mlbl">Break-even</p><p class="mval" id="v-be">—</p></div>
-  <div class="mcard"><p class="mlbl">Year 1 net</p><p class="mval" id="v-yr">—</p></div>
+  <div class="mcard"><p class="mlbl" data-i18n="monthly_revenue">Monthly revenue</p><p class="mval" id="v-rev">—</p></div>
+  <div class="mcard"><p class="mlbl" data-i18n="monthly_net">Monthly net</p><p class="mval" id="v-net">—</p></div>
+  <div class="mcard"><p class="mlbl" data-i18n="break_even">Break-even</p><p class="mval" id="v-be">—</p></div>
+  <div class="mcard"><p class="mlbl" data-i18n="year1_net">Year 1 net</p><p class="mval" id="v-yr">—</p></div>
 </div>
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:1.25rem">
   <div>
-    <p class="sec">Revenue drivers</p>
-    <div class="srow"><div class="slbls"><span>Members</span><span id="d-mem">80</span></div><input type="range" min="10" max="300" step="1" value="80" id="s-mem"></div>
-    <div class="srow"><div class="slbls"><span>Membership price (COP k/mo)</span><span id="d-mp">150k</span></div><input type="range" min="80" max="200" step="5" value="150" id="s-mp"></div>
-    <div class="srow"><div class="slbls"><span>Day passes / month</span><span id="d-dp">30</span></div><input type="range" min="0" max="150" step="5" value="30" id="s-dp"></div>
-    <div class="srow"><div class="slbls"><span>Day pass price (COP k)</span><span id="d-dpp">25k</span></div><input type="range" min="15" max="40" step="1" value="25" id="s-dpp"></div>
-    <div class="srow"><div class="slbls"><span>Courses / month</span><span id="d-c">2</span></div><input type="range" min="0" max="8" step="1" value="2" id="s-c"></div>
-    <div class="srow"><div class="slbls"><span>Students / course</span><span id="d-cs">8</span></div><input type="range" min="4" max="12" step="1" value="8" id="s-cs"></div>
-    <div class="srow"><div class="slbls"><span>Course price / student (COP k)</span><span id="d-cp">250k</span></div><input type="range" min="150" max="350" step="10" value="250" id="s-cp"></div>
-    <div class="srow"><div class="slbls"><span>Gear rental (COP M/mo)</span><span id="d-gr">0.5M</span></div><input type="range" min="0" max="3" step="0.1" value="0.5" id="s-gr"></div>
+    <p class="sec" data-i18n="revenue_drivers">Revenue drivers</p>
+    <div class="srow"><div class="slbls"><span data-i18n="members">Members</span><span id="d-mem">80</span></div><input type="range" min="10" max="300" step="1" value="80" id="s-mem"></div>
+    <div class="srow"><div class="slbls"><span data-i18n="membership_price">Membership price (COP k/mo)</span><span id="d-mp">150k</span></div><input type="range" min="80" max="200" step="5" value="150" id="s-mp"></div>
+    <div class="srow"><div class="slbls"><span data-i18n="day_passes">Day passes / month</span><span id="d-dp">30</span></div><input type="range" min="0" max="150" step="5" value="30" id="s-dp"></div>
+    <div class="srow"><div class="slbls"><span data-i18n="day_pass_price">Day pass price (COP k)</span><span id="d-dpp">25k</span></div><input type="range" min="15" max="40" step="1" value="25" id="s-dpp"></div>
+    <div class="srow"><div class="slbls"><span data-i18n="courses">Courses / month</span><span id="d-c">2</span></div><input type="range" min="0" max="8" step="1" value="2" id="s-c"></div>
+    <div class="srow"><div class="slbls"><span data-i18n="students">Students / course</span><span id="d-cs">8</span></div><input type="range" min="4" max="12" step="1" value="8" id="s-cs"></div>
+    <div class="srow"><div class="slbls"><span data-i18n="course_price">Course price / student (COP k)</span><span id="d-cp">250k</span></div><input type="range" min="150" max="350" step="10" value="250" id="s-cp"></div>
+    <div class="srow"><div class="slbls"><span data-i18n="gear">Gear rental (COP M/mo)</span><span id="d-gr">0.5M</span></div><input type="range" min="0" max="3" step="0.1" value="0.5" id="s-gr"></div>
   </div>
   <div>
-    <p class="sec">Cost structure</p>
-    <div class="srow"><div class="slbls"><span>Fixed costs (COP M/mo)</span><span id="d-fc">8.0M</span></div><input type="range" min="6" max="15" step="0.5" value="8" id="s-fc"></div>
-    <div class="srow"><div class="slbls"><span>Build cost (COP M)</span><span id="d-bc">385M</span></div><input type="range" min="300" max="600" step="5" value="385" id="s-bc"></div>
-    <p class="sec" style="margin-top:14px">Pre-sale (Hormozi move)</p>
-    <div class="srow"><div class="slbls"><span>Founding members</span><span id="d-fm">0</span></div><input type="range" min="0" max="80" step="5" value="0" id="s-fm"></div>
-    <div class="srow"><div class="slbls"><span>Founding price (COP k upfront)</span><span id="d-fmp">500k</span></div><input type="range" min="300" max="700" step="50" value="500" id="s-fmp"></div>
-    <p class="sec" style="margin-top:14px">Revenue mix</p>
-    <div style="position:relative;height:140px;margin-bottom:6px">
-      <canvas id="bc"></canvas>
-    </div>
+    <p class="sec" data-i18n="cost_structure">Cost structure</p>
+    <div class="srow"><div class="slbls"><span data-i18n="fixed_costs">Fixed costs (COP M/mo)</span><span id="d-fc">8.0M</span></div><input type="range" min="6" max="15" step="0.5" value="8" id="s-fc"></div>
+    <div class="srow"><div class="slbls"><span data-i18n="build_cost">Build cost (COP M)</span><span id="d-bc">385M</span></div><input type="range" min="300" max="600" step="5" value="385" id="s-bc"></div>
+    <p class="sec" style="margin-top:14px" data-i18n="presale">Pre-sale (Hormozi move)</p>
+    <div class="srow"><div class="slbls"><span data-i18n="founding_members">Founding members</span><span id="d-fm">0</span></div><input type="range" min="0" max="80" step="5" value="0" id="s-fm"></div>
+    <div class="srow"><div class="slbls"><span data-i18n="founding_price">Founding price (COP k upfront)</span><span id="d-fmp">500k</span></div><input type="range" min="300" max="700" step="50" value="500" id="s-fmp"></div>
+    <p class="sec" style="margin-top:14px" data-i18n="revenue_mix">Revenue mix</p>
+    <div style="position:relative;height:140px;margin-bottom:6px"><canvas id="bc"></canvas></div>
     <div id="leg" style="display:flex;flex-wrap:wrap;gap:6px 12px;font-size:11px;color:#666"></div>
   </div>
 </div>
 
-<p class="sec">24-month cumulative net (COP M) — 6-month ramp-up included</p>
-<div style="position:relative;width:100%;height:200px">
-  <canvas id="pc"></canvas>
-</div>
+<p class="sec" data-i18n="projection">24-month cumulative net (COP M) — 6-month ramp-up included</p>
+<div style="position:relative;width:100%;height:200px"><canvas id="pc"></canvas></div>
 
 <script>
 const g = id => document.getElementById(id);
 const C = { mem:'#1D9E75', dp:'#378ADD', course:'#EF9F27', gear:'#7F77DD', neg:'#E24B4A', warn:'#BA7517' };
+let lang = 'en';
+
+const i18n = {
+  en: {
+    title:'Climbing gym — revenue model',
+    monthly_revenue:'Monthly revenue', monthly_net:'Monthly net', break_even:'Break-even', year1_net:'Year 1 net',
+    revenue_drivers:'Revenue drivers', cost_structure:'Cost structure', presale:'Pre-sale (Hormozi move)',
+    revenue_mix:'Revenue mix', projection:'24-month cumulative net (COP M) — 6-month ramp-up included',
+    members:'Members', membership_price:'Membership price (COP k/mo)', day_passes:'Day passes / month',
+    day_pass_price:'Day pass price (COP k)', courses:'Courses / month', students:'Students / course',
+    course_price:'Course price / student (COP k)', gear:'Gear rental (COP M/mo)',
+    fixed_costs:'Fixed costs (COP M/mo)', build_cost:'Build cost (COP M)',
+    founding_members:'Founding members', founding_price:'Founding price (COP k upfront)',
+    chart_members:'Members', chart_dp:'Day passes', chart_courses:'Courses', chart_gear:'Gear',
+    month_unit:'mo'
+  },
+  es: {
+    title:'Gimnasio de escalada — modelo de ingresos',
+    monthly_revenue:'Ingresos mensuales', monthly_net:'Neto mensual', break_even:'Punto de equilibrio', year1_net:'Neto año 1',
+    revenue_drivers:'Factores de ingresos', cost_structure:'Estructura de costos', presale:'Preventa (movimiento Hormozi)',
+    revenue_mix:'Combinación de ingresos', projection:'Neto acumulado 24 meses (COP M) — ajuste de 6 meses incluido',
+    members:'Miembros', membership_price:'Precio membresía (COP k/mes)', day_passes:'Pases diarios / mes',
+    day_pass_price:'Precio pase diario (COP k)', courses:'Cursos / mes', students:'Estudiantes / curso',
+    course_price:'Precio curso / estudiante (COP k)', gear:'Alquiler equipo (COP M/mes)',
+    fixed_costs:'Costos fijos (COP M/mes)', build_cost:'Costo construcción (COP M)',
+    founding_members:'Miembros fundadores', founding_price:'Precio inicial (COP k por adelantado)',
+    chart_members:'Miembros', chart_dp:'Pases diarios', chart_courses:'Cursos', chart_gear:'Equipo',
+    month_unit:'meses'
+  }
+};
+
+function setLang(l) {
+  lang = l;
+  document.documentElement.lang = l;
+  g('btn-en').classList.toggle('active', l==='en');
+  g('btn-es').classList.toggle('active', l==='es');
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (i18n[l][key]) el.textContent = i18n[l][key];
+  });
+  bChart.data.labels = [i18n[l].chart_members, i18n[l].chart_dp, i18n[l].chart_courses, i18n[l].chart_gear];
+  bChart.update('none');
+  run();
+}
 
 let bChart = new Chart(g('bc'), {
   type:'doughnut',
@@ -95,15 +146,14 @@ let pChart = new Chart(g('pc'), {
 
 function run() {
   const v = {
-    mem:+g('s-mem').value, mp:+g('s-mp').value,
-    dp:+g('s-dp').value, dpp:+g('s-dpp').value,
-    c:+g('s-c').value, cs:+g('s-cs').value, cp:+g('s-cp').value,
-    gr:+g('s-gr').value, fc:+g('s-fc').value, bc:+g('s-bc').value,
-    fm:+g('s-fm').value, fmp:+g('s-fmp').value
+    mem:+g('s-mem').value, mp:+g('s-mp').value, dp:+g('s-dp').value, dpp:+g('s-dpp').value,
+    c:+g('s-c').value, cs:+g('s-cs').value, cp:+g('s-cp').value, gr:+g('s-gr').value,
+    fc:+g('s-fc').value, bc:+g('s-bc').value, fm:+g('s-fm').value, fmp:+g('s-fmp').value
   };
   const rMem=v.mem*v.mp*1e3, rDp=v.dp*v.dpp*1e3, rCourse=v.c*v.cs*v.cp*1e3, rGear=v.gr*1e6;
   const totalRev=rMem+rDp+rCourse+rGear, costs=v.fc*1e6, netMo=totalRev-costs;
   const netMoM=netMo/1e6, presale=v.fm*v.fmp*1e3, effBc=Math.max(0,v.bc*1e6-presale), yr1=netMoM*12;
+  const t=i18n[lang];
 
   g('v-rev').textContent='$'+Math.round(totalRev/1e6)+'M/mo';
   g('v-net').textContent=(netMoM>=0?'+':'')+'$'+Math.round(netMoM)+'M/mo';
@@ -112,16 +162,18 @@ function run() {
   g('v-yr').style.color=yr1>=0?C.mem:C.neg;
 
   let beText='∞', beColor=C.neg;
-  if(netMo>0){ const mo=Math.ceil(effBc/netMo); beText=mo+' mo'; beColor=mo<=24?C.mem:mo<=42?C.warn:C.neg; }
+  if(netMo>0){ const mo=Math.ceil(effBc/netMo); beText=mo+' '+t.month_unit; beColor=mo<=24?C.mem:mo<=42?C.warn:C.neg; }
   g('v-be').textContent=beText; g('v-be').style.color=beColor;
 
   const bData=[rMem,rDp,rCourse,rGear];
   bChart.data.datasets[0].data=bData; bChart.update('none');
 
   const total=bData.reduce((a,b)=>a+b,0);
-  g('leg').innerHTML=['Members','Day passes','Courses','Gear'].map((l,i)=>{
+  const lbls=[t.chart_members,t.chart_dp,t.chart_courses,t.chart_gear];
+  const cols=[C.mem,C.dp,C.course,C.gear];
+  g('leg').innerHTML=lbls.map((lbl,i)=>{
     const pct=total>0?Math.round(bData[i]/total*100):0;
-    return `<span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:8px;border-radius:1px;background:${[C.mem,C.dp,C.course,C.gear][i]};display:inline-block"></span>${l} ${pct}%</span>`;
+    return `<span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:8px;border-radius:1px;background:${cols[i]};display:inline-block"></span>${lbl} ${pct}%</span>`;
   }).join('');
 
   const ramp=[0.25,0.40,0.55,0.68,0.80,0.90,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1];

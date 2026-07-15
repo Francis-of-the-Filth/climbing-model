@@ -1,192 +1,424 @@
+This rebuilt forecasting engine (v5) directly addresses the structural and financial gaps identified in your model's architecture.
+
+It implements the precise term-based calendar logic for the Colombian school year (opening in March), splits out founding members to track their revenue dilution, introduces the maximum drawdown metric to show your true capital requirements, and factors in real-world operational frictions like taxes, payment processing, and annual wage escalation.
+
+Save the code block below as an `.html` file and open it in any web browser.
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Climbing Gym Revenue Model</title>
+<title>Climbing Gym Model v5</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: sans-serif; padding: 24px; background: #fff; color: #111; max-width: 760px; margin: 0 auto; }
-.sr-only { position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0) }
-.srow { margin-bottom:11px }
-.slbls { display:flex;justify-content:space-between;margin-bottom:3px;font-size:12px }
-.slbls span:first-child { color:#666 }
-.slbls span:last-child { font-weight:500;color:#111;font-size:12px }
-input[type=range] { width:100%;cursor:pointer }
-.sec { font-size:10px;font-weight:500;color:#666;letter-spacing:0.07em;text-transform:uppercase;margin:0 0 9px;border-bottom:0.5px solid #ddd;padding-bottom:5px }
-.mcard { background:#f5f5f5;border-radius:8px;padding:11px 13px }
-.mlbl { font-size:10px;color:#666;margin:0 0 2px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em }
-.mval { font-size:20px;font-weight:500;margin:0;color:#111 }
-.header { display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem }
-h1 { font-size:16px;font-weight:500;color:#111 }
-.lang-toggle { display:flex;border:1px solid #ddd;border-radius:6px;overflow:hidden }
-.lang-btn { padding:5px 14px;background:#fff;border:none;cursor:pointer;color:#666;font-size:12px;font-family:sans-serif }
-.lang-btn.active { background:#111;color:#fff }
-.lang-btn:hover:not(.active) { background:#f5f5f5 }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 24px; background: #fafaf8; color: #1a1a1a; max-width: 900px; margin: 0 auto; }
+
+.hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem }
+.htitle { font-size:18px; font-weight:700; color:#1a1a1a; letter-spacing:-0.02em; }
+.ltog { display:flex; border:1px solid #ddd; border-radius:6px; overflow:hidden; background:#fff }
+.lbtn { padding:5px 14px; background:transparent; border:none; cursor:pointer; color:#666; font-size:12px; font-family:inherit; font-weight:600; }
+.lbtn.active { background:#1a1a1a; color:#fff }
+
+/* Metrics */
+.grid6 { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px; margin-bottom:1.5rem }
+.mcard { background:#fff; border:1px solid #eee; border-radius:10px; padding:12px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+.mlbl { font-size:10px; color:#888; margin:0 0 4px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em }
+.mval { font-size:18px; font-weight:700; margin:0; color:#1a1a1a }
+.mval.warn { color:#D85A30; }
+
+/* Layout grids */
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom: 16px; }
+
+/* Category panels */
+.panel { background:#fff; border:1px solid #eee; border-radius:12px; padding:16px; margin-bottom:16px; border-left:4px solid #ccc; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+.panel.rev  { border-left-color:#1D9E75 }
+.panel.fnd  { border-left-color:#9B59B6 }
+.panel.yth  { border-left-color:#D85A30 }
+.panel.ops  { border-left-color:#378ADD }
+.panel.capx { border-left-color:#7F77DD }
+.panel.fric { border-left-color:#E24B4A }
+
+.phead { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px; padding-bottom:10px; border-bottom: 1px solid #f0f0f0; }
+.ptitle { font-size:12px; font-weight:700; color:#333; letter-spacing:0.05em; text-transform:uppercase }
+.ptotal { font-size:14px; font-weight:700 }
+.ptotal.pos { color:#1D9E75 }
+.ptotal.negc { color:#D85A30 }
+.psub { font-size:10px; color:#999; font-weight:400; margin-left:4px }
+
+.srow { margin-bottom:12px }
+.srow:last-child { margin-bottom:0 }
+.slbls { display:flex; justify-content:space-between; margin-bottom:4px; font-size:13px }
+.slbls span:first-child { color:#555 }
+.slbls span:last-child { font-weight:600; color:#1a1a1a; font-variant-numeric: tabular-nums; }
+input[type=range] { width:100%; cursor:pointer; accent-color:#1D9E75; height: 4px; border-radius: 2px; }
+.panel.yth input[type=range], .panel.fric input[type=range] { accent-color:#D85A30 }
+.panel.fnd input[type=range] { accent-color:#9B59B6 }
+.panel.ops input[type=range] { accent-color:#378ADD }
+.panel.capx input[type=range] { accent-color:#7F77DD }
+
+.note { font-size:11px; color:#888; margin:4px 0 10px; line-height:1.4; padding: 6px 8px; background: #f9f9f9; border-radius: 4px; }
+.chartpanel { background:#fff; border:1px solid #eee; border-radius:12px; padding:16px; margin-bottom:16px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+.csec { font-size:12px; font-weight:700; color:#444; letter-spacing:0.04em; text-transform:uppercase; margin-bottom:12px }
+
+@media (max-width:768px){ .grid2{grid-template-columns:1fr !important} .grid6{grid-template-columns:repeat(3,1fr) !important; gap: 8px;} }
 </style>
 </head>
 <body>
 
-<div class="header">
-  <h1 data-i18n="title">Climbing gym — revenue model</h1>
-  <div class="lang-toggle">
-    <button class="lang-btn active" id="btn-en" onclick="setLang('en')">EN</button>
-    <button class="lang-btn" id="btn-es" onclick="setLang('es')">ES</button>
+<div class="hdr">
+  <span class="htitle" id="t-title">Climbing Gym — Model v5</span>
+  <div class="ltog">
+    <button class="lbtn active" id="btn-en" onclick="setLang('en')">EN</button>
+    <button class="lbtn" id="btn-es" onclick="setLang('es')">ES</button>
   </div>
 </div>
 
-<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:1.25rem">
-  <div class="mcard"><p class="mlbl" data-i18n="monthly_revenue">Monthly revenue</p><p class="mval" id="v-rev">—</p></div>
-  <div class="mcard"><p class="mlbl" data-i18n="monthly_net">Monthly net</p><p class="mval" id="v-net">—</p></div>
-  <div class="mcard"><p class="mlbl" data-i18n="break_even">Break-even</p><p class="mval" id="v-be">—</p></div>
-  <div class="mcard"><p class="mlbl" data-i18n="year1_net">Year 1 net</p><p class="mval" id="v-yr">—</p></div>
+<!-- TOP METRICS -->
+<div class="grid6">
+  <div class="mcard"><p class="mlbl" id="l-m24">Members @ Mo 24</p><p class="mval" id="v-m24">—</p></div>
+  <div class="mcard"><p class="mlbl" id="l-rev">Revenue @ Mo 24</p><p class="mval" id="v-rev">—</p></div>
+  <div class="mcard"><p class="mlbl" id="l-ebitda">EBITDA Margin</p><p class="mval" id="v-ebitda">—</p></div>
+  <div class="mcard"><p class="mlbl" id="l-be">Break-even</p><p class="mval" id="v-be">—</p></div>
+  <div class="mcard"><p class="mlbl" id="l-draw">Max Drawdown</p><p class="mval" id="v-draw">—</p></div>
+  <div class="mcard"><p class="mlbl" id="l-net">Net Inc @ Mo 24</p><p class="mval" id="v-net">—</p></div>
 </div>
 
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:1.25rem">
-  <div>
-    <p class="sec" data-i18n="revenue_drivers">Revenue drivers</p>
-    <div class="srow"><div class="slbls"><span data-i18n="members">Members</span><span id="d-mem">80</span></div><input type="range" min="10" max="300" step="1" value="80" id="s-mem"></div>
-    <div class="srow"><div class="slbls"><span data-i18n="membership_price">Membership price (COP k/mo)</span><span id="d-mp">150k</span></div><input type="range" min="80" max="200" step="5" value="150" id="s-mp"></div>
-    <div class="srow"><div class="slbls"><span data-i18n="day_passes">Day passes / month</span><span id="d-dp">30</span></div><input type="range" min="0" max="150" step="5" value="30" id="s-dp"></div>
-    <div class="srow"><div class="slbls"><span data-i18n="day_pass_price">Day pass price (COP k)</span><span id="d-dpp">25k</span></div><input type="range" min="15" max="40" step="1" value="25" id="s-dpp"></div>
-    <div class="srow"><div class="slbls"><span data-i18n="courses">Courses / month</span><span id="d-c">2</span></div><input type="range" min="0" max="8" step="1" value="2" id="s-c"></div>
-    <div class="srow"><div class="slbls"><span data-i18n="students">Students / course</span><span id="d-cs">8</span></div><input type="range" min="4" max="12" step="1" value="8" id="s-cs"></div>
-    <div class="srow"><div class="slbls"><span data-i18n="course_price">Course price / student (COP k)</span><span id="d-cp">250k</span></div><input type="range" min="150" max="350" step="10" value="250" id="s-cp"></div>
-    <div class="srow"><div class="slbls"><span data-i18n="gear">Gear rental (COP M/mo)</span><span id="d-gr">0.5M</span></div><input type="range" min="0" max="3" step="0.1" value="0.5" id="s-gr"></div>
+<div class="grid2">
+<!-- LEFT COLUMN -->
+<div>
+  
+  <div class="panel rev">
+    <div class="phead"><span class="ptitle" id="l-adult">Base Memberships</span><span class="ptotal pos"><span id="pt-adult">—</span></span></div>
+    <div class="srow"><div class="slbls"><span id="l-sm">Starting members</span><span id="d-sm">50</span></div><input type="range" min="0" max="150" step="5" value="50" id="s-sm"></div>
+    <div class="srow"><div class="slbls"><span id="l-nm">New members / month</span><span id="d-nm">15</span></div><input type="range" min="0" max="50" step="1" value="15" id="s-nm"></div>
+    <div class="srow"><div class="slbls"><span id="l-ch">Monthly churn (CWA baseline)</span><span id="d-ch">7.5%</span></div><input type="range" min="3" max="15" step="0.5" value="7.5" id="s-ch"></div>
+    <div class="srow"><div class="slbls"><span id="l-mp">Price (COP k/mo)</span><span id="d-mp">150k</span></div><input type="range" min="100" max="250" step="5" value="150" id="s-mp"></div>
+    <div class="srow"><div class="slbls"><span id="l-pmx">Prepaid mix (Quarterly/Annual)</span><span id="d-pmx">20%</span></div><input type="range" min="0" max="60" step="5" value="20" id="s-pmx"></div>
+    <div class="srow"><div class="slbls"><span id="l-pdi">Prepaid effective discount</span><span id="d-pdi">15%</span></div><input type="range" min="0" max="30" step="1" value="15" id="s-pdi"></div>
   </div>
-  <div>
-    <p class="sec" data-i18n="cost_structure">Cost structure</p>
-    <div class="srow"><div class="slbls"><span data-i18n="fixed_costs">Fixed costs (COP M/mo)</span><span id="d-fc">8.0M</span></div><input type="range" min="6" max="15" step="0.5" value="8" id="s-fc"></div>
-    <div class="srow"><div class="slbls"><span data-i18n="build_cost">Build cost (COP M)</span><span id="d-bc">385M</span></div><input type="range" min="300" max="600" step="5" value="385" id="s-bc"></div>
-    <p class="sec" style="margin-top:14px" data-i18n="presale">Pre-sale (Hormozi move)</p>
-    <div class="srow"><div class="slbls"><span data-i18n="founding_members">Founding members</span><span id="d-fm">0</span></div><input type="range" min="0" max="80" step="5" value="0" id="s-fm"></div>
-    <div class="srow"><div class="slbls"><span data-i18n="founding_price">Founding price (COP k upfront)</span><span id="d-fmp">500k</span></div><input type="range" min="300" max="700" step="50" value="500" id="s-fmp"></div>
-    <p class="sec" style="margin-top:14px" data-i18n="revenue_mix">Revenue mix</p>
+
+  <div class="panel fnd">
+    <div class="phead"><span class="ptitle" id="l-fnd">Founders (Locked Capacity)</span><span class="ptotal pos"><span id="pt-fnd">—</span></span></div>
+    <p class="note" id="l-fndnote">Founders offset build cost upfront, but consume capacity at a locked discount forever.</p>
+    <div class="srow"><div class="slbls"><span id="l-fm">Founder count</span><span id="d-fm">15</span></div><input type="range" min="0" max="50" step="1" value="15" id="s-fm"></div>
+    <div class="srow"><div class="slbls"><span id="l-fup">Upfront fee (COP k)</span><span id="d-fup">700k</span></div><input type="range" min="300" max="1500" step="50" value="700" id="s-fup"></div>
+    <div class="srow"><div class="slbls"><span id="l-flk">Locked rate (COP k/mo)</span><span id="d-flk">100k</span></div><input type="range" min="50" max="150" step="5" value="100" id="s-flk"></div>
+  </div>
+
+  <div class="panel yth">
+    <div class="phead"><span class="ptitle" id="l-yth">Term-Based Youth & Camps</span><span class="ptotal pos"><span id="pt-yth">—</span></span></div>
+    <p class="note" id="l-ythnote">Terms: Feb-Jun & Aug-Nov. Camps: Jul, Dec, Jan.</p>
+    <div class="srow"><div class="slbls"><span id="l-yk">Kids / term</span><span id="d-yk">25</span></div><input type="range" min="0" max="80" step="5" value="25" id="s-yk"></div>
+    <div class="srow"><div class="slbls"><span id="l-yp">Term fee (COP k/term)</span><span id="d-yp">240k</span></div><input type="range" min="150" max="400" step="10" value="240" id="s-yp"></div>
+    <div class="srow"><div class="slbls"><span id="l-ycp">Camp revenue (COP M/camp mo)</span><span id="d-ycp">3.0M</span></div><input type="range" min="0" max="10" step="0.5" value="3.0" id="s-ycp"></div>
+  </div>
+
+  <div class="panel ops">
+    <div class="phead"><span class="ptitle" id="l-oth">Ancillary</span><span class="ptotal pos"><span id="pt-oth">—</span></span></div>
+    <div class="srow"><div class="slbls"><span id="l-dp">Day passes / mo</span><span id="d-dp">40</span></div><input type="range" min="0" max="150" step="5" value="40" id="s-dp"></div>
+    <div class="srow"><div class="slbls"><span id="l-dpp">Day pass price (COP k)</span><span id="d-dpp">32k</span></div><input type="range" min="20" max="60" step="1" value="32" id="s-dpp"></div>
+    <div class="srow"><div class="slbls"><span id="l-cat">Café attachment (% of visits)</span><span id="d-cat">20%</span></div><input type="range" min="0" max="50" step="1" value="20" id="s-cat"></div>
+    <div class="srow"><div class="slbls"><span id="l-csp">Café gross profit / visit (COP k)</span><span id="d-csp">6.0k</span></div><input type="range" min="2" max="15" step="0.5" value="6.0" id="s-csp"></div>
+    <div class="srow"><div class="slbls"><span id="l-c">Courses / mo</span><span id="d-c">3</span></div><input type="range" min="0" max="8" step="1" value="3" id="s-c"></div>
+    <div class="srow"><div class="slbls"><span id="l-cp">Course price (COP k)</span><span id="d-cp">200k</span></div><input type="range" min="100" max="300" step="10" value="200" id="s-cp"></div>
+  </div>
+</div>
+
+<!-- RIGHT COLUMN -->
+<div>
+  <div class="panel capx">
+    <div class="phead"><span class="ptitle" id="l-cap">Capital & Seasonality</span><span class="ptotal"><span id="pt-cap">—</span></span></div>
+    <div class="srow"><div class="slbls"><span id="l-bc">Build cost (COP M)</span><span id="d-bc">400M</span></div><input type="range" min="300" max="800" step="10" value="400" id="s-bc"></div>
+    <div class="srow"><div class="slbls"><span id="l-pob">Pre-opening burn (COP M)</span><span id="d-pob">20M</span></div><input type="range" min="0" max="100" step="5" value="20" id="s-pob"></div>
+    <div class="srow"><div class="slbls"><span id="l-vac">Vacation dip (Dec/Jan)</span><span id="d-vac">75%</span></div><input type="range" min="50" max="100" step="5" value="75" id="s-vac"></div>
+  </div>
+
+  <div class="panel fric">
+    <div class="phead"><span class="ptitle" id="l-fric">Financial Frictions & Owner</span><span class="ptotal negc"><span id="pt-fric">—</span></span></div>
+    <div class="srow"><div class="slbls"><span id="l-od">Owner draw (COP M/mo)</span><span id="d-od">2.0M</span></div><input type="range" min="0" max="10" step="0.5" value="2.0" id="s-od"></div>
+    <div class="srow"><div class="slbls"><span id="l-tax">Taxes (% gross rev)</span><span id="d-tax">4.0%</span></div><input type="range" min="0" max="10" step="0.5" value="4.0" id="s-tax"></div>
+    <div class="srow"><div class="slbls"><span id="l-fee">Payment fees (2.5% on 70% vol)</span><span id="d-fee">1.8%</span></div><input type="range" min="0" max="4" step="0.1" value="1.8" id="s-fee"></div>
+    <div class="srow"><div class="slbls"><span id="l-esc">Year 2 cost escalation</span><span id="d-esc">10%</span></div><input type="range" min="0" max="20" step="1" value="10" id="s-esc"></div>
+  </div>
+
+  <div class="panel ops">
+    <div class="phead"><span class="ptitle" id="l-crew">Payroll & Operations</span><span class="ptotal negc"><span id="pt-ops">—</span></span></div>
+    <div class="srow"><div class="slbls"><span id="l-hc">Head coach / setter (COP M)</span><span id="d-hc">2.5M</span></div><input type="range" min="1.8" max="4" step="0.1" value="2.5" id="s-hc"></div>
+    <div class="srow"><div class="slbls"><span id="l-fd">Front desk & admin (COP M)</span><span id="d-fd">1.6M</span></div><input type="range" min="1.4" max="3.5" step="0.1" value="1.6" id="s-fd"></div>
+    <div class="srow"><div class="slbls"><span id="l-cl">Cleaning/Maint. (COP M)</span><span id="d-cl">1.0M</span></div><input type="range" min="0" max="2" step="0.1" value="1.0" id="s-cl"></div>
+    <div class="srow"><div class="slbls"><span id="l-pf">Prestaciones multiplier</span><span id="d-pf">1.50×</span></div><input type="range" min="1.35" max="1.65" step="0.01" value="1.50" id="s-pf"></div>
+    <div class="srow"><div class="slbls"><span id="l-el">Electricity & Utilities (COP M)</span><span id="d-el">2.6M</span></div><input type="range" min="1" max="5" step="0.1" value="2.6" id="s-el"></div>
+    <div class="srow"><div class="slbls"><span id="l-hm">Fixed overhead (Ins, Mktg, Acc)</span><span id="d-hm">2.0M</span></div><input type="range" min="0.5" max="5" step="0.1" value="2.0" id="s-hm"></div>
+  </div>
+
+</div>
+</div>
+
+<div class="grid2">
+  <div class="chartpanel">
+    <p class="csec" id="l-rm">Revenue Mix @ Mo 24</p>
     <div style="position:relative;height:140px;margin-bottom:6px"><canvas id="bc"></canvas></div>
-    <div id="leg" style="display:flex;flex-wrap:wrap;gap:6px 12px;font-size:11px;color:#666"></div>
+    <div id="leg" style="display:flex;flex-wrap:wrap;justify-content:center;gap:6px 12px;font-size:11px;color:#666"></div>
+  </div>
+  <div class="chartpanel">
+    <p class="csec" id="l-cm">Cost Mix @ Mo 24</p>
+    <div style="position:relative;height:140px;margin-bottom:6px"><canvas id="cc"></canvas></div>
+    <div id="cleg" style="display:flex;flex-wrap:wrap;justify-content:center;gap:6px 12px;font-size:11px;color:#666"></div>
   </div>
 </div>
 
-<p class="sec" data-i18n="projection">24-month cumulative net (COP M) — 6-month ramp-up included</p>
-<div style="position:relative;width:100%;height:200px"><canvas id="pc"></canvas></div>
+<div class="chartpanel">
+  <p class="csec" id="l-proj">24-Mo Cumulative Cash Flow (COP M) — Opens March</p>
+  <div style="position:relative;width:100%;height:200px"><canvas id="pc"></canvas></div>
+</div>
 
 <script>
 const g = id => document.getElementById(id);
-const C = { mem:'#1D9E75', dp:'#378ADD', course:'#EF9F27', gear:'#7F77DD', neg:'#E24B4A', warn:'#BA7517' };
+const C = { mem:'#1D9E75', youth:'#D85A30', course:'#EF9F27', dp:'#378ADD', cafe:'#9B59B6', 
+            pay:'#D85A30', util:'#378ADD', fric:'#E24B4A', fnd:'#7F77DD', 
+            warn:'#BA7517', bg:'#f0f0f0' };
 let lang = 'en';
 
 const i18n = {
   en: {
-    title:'Climbing gym — revenue model',
-    monthly_revenue:'Monthly revenue', monthly_net:'Monthly net', break_even:'Break-even', year1_net:'Year 1 net',
-    revenue_drivers:'Revenue drivers', cost_structure:'Cost structure', presale:'Pre-sale (Hormozi move)',
-    revenue_mix:'Revenue mix', projection:'24-month cumulative net (COP M) — 6-month ramp-up included',
-    members:'Members', membership_price:'Membership price (COP k/mo)', day_passes:'Day passes / month',
-    day_pass_price:'Day pass price (COP k)', courses:'Courses / month', students:'Students / course',
-    course_price:'Course price / student (COP k)', gear:'Gear rental (COP M/mo)',
-    fixed_costs:'Fixed costs (COP M/mo)', build_cost:'Build cost (COP M)',
-    founding_members:'Founding members', founding_price:'Founding price (COP k upfront)',
-    chart_members:'Members', chart_dp:'Day passes', chart_courses:'Courses', chart_gear:'Gear',
-    month_unit:'mo'
+    title: 'Climbing Gym — Model v5',
+    m24:'Members @ Mo 24', rev:'Revenue @ Mo 24', ebitda:'EBITDA Margin', be:'Break-even', draw:'Max Drawdown', net:'Net Inc @ Mo 24',
+    adult:'Base Memberships', fnd:'Founders (Locked Capacity)', yth:'Term-Based Youth & Camps', oth:'Ancillary', cap:'Capital & Seasonality', fric:'Financial Frictions & Owner', crew:'Payroll & Operations',
+    rm:'Revenue Mix @ Mo 24', cm:'Cost Mix @ Mo 24', proj:'24-Mo Cumulative Cash Flow (COP M) — Opens March',
+    sm:'Starting members', nm:'New members / month', ch:'Monthly churn (CWA baseline)', mp:'Price (COP k/mo)', pmx:'Prepaid mix (Qtr/Ann)', pdi:'Prepaid effective discount',
+    fm:'Founder count', fup:'Upfront fee (COP k)', flk:'Locked rate (COP k/mo)',
+    yk:'Kids / term', yp:'Term fee (COP k/term)', ycp:'Camp revenue (COP M/camp mo)',
+    dp:'Day passes / mo', dpp:'Day pass price (COP k)', cat:'Café attachment (% of visits)', csp:'Café gross profit / visit (COP k)', c:'Courses / mo', cp:'Course price (COP k)',
+    bc:'Build cost (COP M)', pob:'Pre-opening burn (COP M)', vac:'Vacation dip (Dec/Jan)',
+    od:'Owner draw (COP M/mo)', tax:'Taxes (% gross rev)', fee:'Payment fees (2.5% on 70% vol)', esc:'Year 2 cost escalation',
+    hc:'Head coach / setter (COP M)', fd:'Front desk & admin (COP M)', cl:'Cleaning/Maint. (COP M)', pf:'Prestaciones multiplier', el:'Electricity & Utilities (COP M)', hm:'Fixed overhead (Ins, Mktg, Acc)',
+    fndnote:'Founders offset build cost upfront, but consume capacity at a locked discount forever.',
+    ythnote:'Terms: Feb-Jun & Aug-Nov. Camps: Jul, Dec, Jan.',
+    l_mem:'Base', l_fnd:'Founders', l_yth:'Youth', l_oth:'Pass/Course', l_caf:'Café',
+    l_pay:'Payroll', l_ops:'Ops', l_own:'Owner', l_tax:'Tax/Fee', mo:'mo'
   },
   es: {
-    title:'Gimnasio de escalada — modelo de ingresos',
-    monthly_revenue:'Ingresos mensuales', monthly_net:'Neto mensual', break_even:'Punto de equilibrio', year1_net:'Neto año 1',
-    revenue_drivers:'Factores de ingresos', cost_structure:'Estructura de costos', presale:'Preventa (movimiento Hormozi)',
-    revenue_mix:'Combinación de ingresos', projection:'Neto acumulado 24 meses (COP M) — ajuste de 6 meses incluido',
-    members:'Miembros', membership_price:'Precio membresía (COP k/mes)', day_passes:'Pases diarios / mes',
-    day_pass_price:'Precio pase diario (COP k)', courses:'Cursos / mes', students:'Estudiantes / curso',
-    course_price:'Precio curso / estudiante (COP k)', gear:'Alquiler equipo (COP M/mes)',
-    fixed_costs:'Costos fijos (COP M/mes)', build_cost:'Costo construcción (COP M)',
-    founding_members:'Miembros fundadores', founding_price:'Precio inicial (COP k por adelantado)',
-    chart_members:'Miembros', chart_dp:'Pases diarios', chart_courses:'Cursos', chart_gear:'Equipo',
-    month_unit:'meses'
+    title: 'Gimnasio de Escalada — Modelo v5',
+    m24:'Miembros @ Mes 24', rev:'Ingresos @ Mes 24', ebitda:'Margen EBITDA', be:'Punto Equilibrio', draw:'Agujero Máximo', net:'Neto @ Mes 24',
+    adult:'Membresías Base', fnd:'Fundadores (Capacidad Fija)', yth:'Juvenil por Ciclos y Vacaciones', oth:'Adicionales', cap:'Capital y Estacionalidad', fric:'Fricción Financiera y Dueño', crew:'Nómina y Operaciones',
+    rm:'Mix Ingresos @ Mes 24', cm:'Mix Costos @ Mes 24', proj:'Flujo de Caja Acumulado (24 Meses) — Apertura Marzo',
+    sm:'Miembros iniciales', nm:'Nuevos miembros / mes', ch:'Deserción mensual (base CWA)', mp:'Precio (COP k/mes)', pmx:'Mix prepago (Trim/Anual)', pdi:'Descuento efectivo prepago',
+    fm:'Cantidad fundadores', fup:'Aporte inicial (COP k)', flk:'Tarifa congelada (COP k/mes)',
+    yk:'Niños / ciclo', yp:'Mensualidad ciclo (COP k/ciclo)', ycp:'Ingreso vacaciones (COP M/mes)',
+    dp:'Pases diarios / mes', dpp:'Precio pase (COP k)', cat:'Conversión café (% visitas)', csp:'Utilidad café / visita (COP k)', c:'Cursos / mes', cp:'Precio curso (COP k)',
+    bc:'Costo construcción (COP M)', pob:'Quema pre-apertura (COP M)', vac:'Baja vacacional (Dic/Ene)',
+    od:'Retiro dueño (COP M/mes)', tax:'Impuestos (% ingr. bruto)', fee:'Comisión TC (2.5% al 70%)', esc:'Inflación costos Año 2',
+    hc:'Entrenador jefe (COP M)', fd:'Recepción y admin (COP M)', cl:'Aseo/Mantenimiento (COP M)', pf:'Multiplicador prestaciones', el:'Electricidad y Serv. (COP M)', hm:'Gastos fijos (Seguro, Mktg)',
+    fndnote:'Los fundadores reducen el costo inicial, pero ocupan capacidad con descuento de por vida.',
+    ythnote:'Ciclos: Feb-Jun y Ago-Nov. Vacaciones: Jul, Dic, Ene.',
+    l_mem:'Base', l_fnd:'Fundad.', l_yth:'Juv', l_oth:'Pase/Curso', l_caf:'Café',
+    l_pay:'Nómina', l_ops:'Operativo', l_own:'Dueño', l_tax:'Imp/Comis', mo:'meses'
   }
+};
+
+const labelMap = {
+  'l-m24':'m24','l-rev':'rev','l-ebitda':'ebitda','l-be':'be','l-draw':'draw','l-net':'net',
+  'l-adult':'adult','l-fnd':'fnd','l-yth':'yth','l-oth':'oth','l-cap':'cap','l-fric':'fric','l-crew':'crew',
+  'l-rm':'rm','l-cm':'cm','l-proj':'proj',
+  'l-sm':'sm','l-nm':'nm','l-ch':'ch','l-mp':'mp','l-pmx':'pmx','l-pdi':'pdi',
+  'l-fm':'fm','l-fup':'fup','l-flk':'flk',
+  'l-yk':'yk','l-yp':'yp','l-ycp':'ycp',
+  'l-dp':'dp','l-dpp':'dpp','l-cat':'cat','l-csp':'csp','l-c':'c','l-cp':'cp',
+  'l-bc':'bc','l-pob':'pob','l-vac':'vac',
+  'l-od':'od','l-tax':'tax','l-fee':'fee','l-esc':'esc',
+  'l-hc':'hc','l-fd':'fd','l-cl':'cl','l-pf':'pf','l-el':'el','l-hm':'hm',
+  'l-fndnote':'fndnote','l-ythnote':'ythnote'
 };
 
 function setLang(l) {
   lang = l;
-  document.documentElement.lang = l;
   g('btn-en').classList.toggle('active', l==='en');
   g('btn-es').classList.toggle('active', l==='es');
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const key = el.getAttribute('data-i18n');
-    if (i18n[l][key]) el.textContent = i18n[l][key];
-  });
-  bChart.data.labels = [i18n[l].chart_members, i18n[l].chart_dp, i18n[l].chart_courses, i18n[l].chart_gear];
-  bChart.update('none');
+  const t = i18n[l];
+  g('t-title').textContent = t.title;
+  Object.entries(labelMap).forEach(([id,key])=>{ const el=g(id); if(el&&t[key]) el.textContent=t[key]; });
   run();
 }
 
+const gridColor = 'rgba(0,0,0,0.05)';
 let bChart = new Chart(g('bc'), {
-  type:'doughnut',
-  data:{ labels:['Members','Day passes','Courses','Gear'], datasets:[{ data:[1,1,1,1], backgroundColor:[C.mem,C.dp,C.course,C.gear], borderWidth:0 }] },
-  options:{ responsive:true, maintainAspectRatio:false, cutout:'62%', plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c => ' $'+Math.round(c.parsed/1e6)+'M' } } } }
+  type:'doughnut', data:{ labels:[], datasets:[{ data:[1,1,1,1,1], backgroundColor:[C.mem,C.fnd,C.youth,C.dp,C.cafe], borderWidth:0 }] },
+  options:{ responsive:true, maintainAspectRatio:false, cutout:'65%', plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c=>' $'+(c.parsed/1e6).toFixed(1)+'M' } } } }
+});
+
+let cChart = new Chart(g('cc'), {
+  type:'doughnut', data:{ labels:[], datasets:[{ data:[1,1,1,1], backgroundColor:[C.pay,C.util,C.warn,C.fric], borderWidth:0 }] },
+  options:{ responsive:true, maintainAspectRatio:false, cutout:'65%', plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c=>' $'+(c.parsed/1e6).toFixed(1)+'M' } } } }
 });
 
 let pChart = new Chart(g('pc'), {
   type:'line',
-  data:{
-    labels: Array.from({length:24},(_,i)=>'Mo '+(i+1)),
+  data:{ labels: Array.from({length:24},(_,i)=>'M'+(i+1)),
     datasets:[
-      { label:'Cumulative net', data:Array(24).fill(0), borderColor:C.mem, backgroundColor:'rgba(29,158,117,0.07)', fill:true, tension:0.35, pointRadius:0, borderWidth:2 },
-      { label:'Break-even', data:Array(24).fill(0), borderColor:'rgba(226,75,74,0.35)', borderDash:[5,3], pointRadius:0, borderWidth:1.5, fill:false }
-    ]
-  },
-  options:{
-    responsive:true, maintainAspectRatio:false,
-    scales:{
-      x:{ grid:{color:'rgba(0,0,0,0.05)'}, ticks:{color:'#888',font:{size:10},maxTicksLimit:12} },
-      y:{ grid:{color:'rgba(0,0,0,0.05)'}, ticks:{color:'#888',font:{size:10},callback:v=>'$'+Math.round(v)+'M'} }
-    },
-    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c => ' $'+Math.round(c.parsed.y)+'M COP' } } }
-  }
+      { data:Array(24).fill(0), borderColor:C.mem, backgroundColor:'rgba(29,158,117,0.1)', fill:true, tension:0.3, pointRadius:2, borderWidth:2 },
+      { data:Array(24).fill(0), borderColor:C.warn, borderDash:[4,4], pointRadius:0, borderWidth:1.5, fill:false }
+    ] },
+  options:{ responsive:true, maintainAspectRatio:false,
+    scales:{ x:{ grid:{color:gridColor}, ticks:{color:'#888',font:{size:10}} }, y:{ grid:{color:gridColor}, ticks:{color:'#888',font:{size:10},callback:v=>'$'+v+'M'} } },
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c=>' $'+Math.round(c.parsed.y)+'M COP' } } } }
 });
+
+function fmtM(x){ return '$'+(x/1e6).toFixed(1)+'M'; }
 
 function run() {
   const v = {
-    mem:+g('s-mem').value, mp:+g('s-mp').value, dp:+g('s-dp').value, dpp:+g('s-dpp').value,
-    c:+g('s-c').value, cs:+g('s-cs').value, cp:+g('s-cp').value, gr:+g('s-gr').value,
-    fc:+g('s-fc').value, bc:+g('s-bc').value, fm:+g('s-fm').value, fmp:+g('s-fmp').value
+    sm:+g('s-sm').value, nm:+g('s-nm').value, ch:+g('s-ch').value, mp:+g('s-mp').value, pmx:+g('s-pmx').value, pdi:+g('s-pdi').value,
+    fm:+g('s-fm').value, fup:+g('s-fup').value, flk:+g('s-flk').value,
+    yk:+g('s-yk').value, yp:+g('s-yp').value, ycp:+g('s-ycp').value,
+    dp:+g('s-dp').value, dpp:+g('s-dpp').value, cat:+g('s-cat').value, csp:+g('s-csp').value, c:+g('s-c').value, cp:+g('s-cp').value,
+    bc:+g('s-bc').value, pob:+g('s-pob').value, vac:+g('s-vac').value,
+    od:+g('s-od').value, tax:+g('s-tax').value, fee:+g('s-fee').value, esc:+g('s-esc').value,
+    hc:+g('s-hc').value, fd:+g('s-fd').value, cl:+g('s-cl').value, pf:+g('s-pf').value, el:+g('s-el').value, hm:+g('s-hm').value
   };
-  const rMem=v.mem*v.mp*1e3, rDp=v.dp*v.dpp*1e3, rCourse=v.c*v.cs*v.cp*1e3, rGear=v.gr*1e6;
-  const totalRev=rMem+rDp+rCourse+rGear, costs=v.fc*1e6, netMo=totalRev-costs;
-  const netMoM=netMo/1e6, presale=v.fm*v.fmp*1e3, effBc=Math.max(0,v.bc*1e6-presale), yr1=netMoM*12;
-  const t=i18n[lang];
+  const t = i18n[lang];
 
-  g('v-rev').textContent='$'+Math.round(totalRev/1e6)+'M/mo';
-  g('v-net').textContent=(netMoM>=0?'+':'')+'$'+Math.round(netMoM)+'M/mo';
-  g('v-net').style.color=netMoM>=0?C.mem:C.neg;
-  g('v-yr').textContent=(yr1>=0?'+':'')+'$'+Math.round(yr1)+'M';
-  g('v-yr').style.color=yr1>=0?C.mem:C.neg;
+  // Capital setup
+  const initHole = (v.bc + v.pob) * 1e6;
+  const founderInjection = v.fm * v.fup * 1e3;
+  let cum = -initHole + founderInjection;
+  let maxDrawdown = cum;
+  
+  let regMembers = v.sm;
+  let beMonth = null;
+  const cumSeries = [];
+  let snap = null;
 
-  let beText='∞', beColor=C.neg;
-  if(netMo>0){ const mo=Math.ceil(effBc/netMo); beText=mo+' '+t.month_unit; beColor=mo<=24?C.mem:mo<=42?C.warn:C.neg; }
-  g('v-be').textContent=beText; g('v-be').style.color=beColor;
+  for (let m = 0; m < 24; m++) {
+    // Escalate costs in year 2
+    const y2f = m >= 12 ? (1 + v.esc/100) : 1;
+    
+    // Seasonality & Calendar (0=Mar, 4=Jul, 9=Dec, 10=Jan)
+    const cycle = m % 12;
+    const isCamp = [4, 9, 10].includes(cycle);
+    const isVac = [9, 10].includes(cycle);
+    const vacF = isVac ? v.vac/100 : 1;
+    const ramp = m===0?0.5 : m===1?0.75 : 1;
 
-  const bData=[rMem,rDp,rCourse,rGear];
-  bChart.data.datasets[0].data=bData; bChart.update('none');
+    // Memberships
+    const churnLoss = regMembers * (v.ch / 100);
+    regMembers = Math.max(0, regMembers + (v.nm * ramp * vacF) - churnLoss);
+    const effMp = v.mp * (1 - (v.pmx/100 * v.pdi/100)); // Blended average rate given prepaid mix
+    
+    const rReg = regMembers * effMp * 1e3;
+    const rFnd = v.fm * v.flk * 1e3;
 
-  const total=bData.reduce((a,b)=>a+b,0);
-  const lbls=[t.chart_members,t.chart_dp,t.chart_courses,t.chart_gear];
-  const cols=[C.mem,C.dp,C.course,C.gear];
-  g('leg').innerHTML=lbls.map((lbl,i)=>{
-    const pct=total>0?Math.round(bData[i]/total*100):0;
-    return `<span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:8px;border-radius:1px;background:${cols[i]};display:inline-block"></span>${lbl} ${pct}%</span>`;
+    // Youth
+    const rYth = isCamp ? (v.ycp * 1e6) : ((v.yk * v.yp * 1e3) / 4); // Amortize term fee over 4 months
+    
+    // Ancillary
+    const rOth = ((v.dp * v.dpp) + (v.c * 8 * v.cp * (isVac?0.5:1))) * 1e3; // 8 students per course
+    const monthlyVisits = (regMembers + v.fm) * 1.5 * 4.3 * vacF; // 1.5 visits/week
+    const rCaf = monthlyVisits * (v.cat/100) * v.csp * 1e3;
+
+    const totalRev = rReg + rFnd + rYth + rOth + rCaf;
+
+    // Expenses
+    const payroll = (v.hc + v.fd + v.cl) * v.pf * y2f * 1e6;
+    const ops = (v.el + v.hm) * y2f * 1e6;
+    const fric = totalRev * (v.tax/100 + v.fee/100);
+    const owner = v.od * 1e6;
+    
+    const totalCost = payroll + ops + fric + owner;
+    const ebitda = totalRev - payroll - ops; // Pre-tax, pre-owner
+    const net = totalRev - totalCost;
+
+    cum += net;
+    if (cum < maxDrawdown) maxDrawdown = cum;
+    if (beMonth === null && cum >= 0) beMonth = m + 1;
+    
+    cumSeries.push(Math.round(cum/1e6));
+
+    if (m === 23) {
+      snap = { rev: totalRev, net, ebitdaMargin: (ebitda/totalRev)*100, 
+               mix: [rReg, rFnd, rYth, rOth, rCaf],
+               cost: totalCost, cmix: [payroll, ops, owner, fric] };
+    }
+  }
+
+  // UI Updates
+  g('v-m24').textContent = Math.round(regMembers + v.fm);
+  g('v-rev').textContent = fmtM(snap.rev);
+  
+  const em = Math.round(snap.ebitdaMargin);
+  g('v-ebitda').textContent = em + '%';
+  g('v-ebitda').className = 'mval ' + (em > 30 ? 'warn' : ''); // Sanity check flag
+
+  g('v-draw').textContent = '-'+fmtM(Math.abs(maxDrawdown));
+  g('v-draw').style.color = C.fric;
+
+  g('v-net').textContent = (snap.net>=0?'+':'')+fmtM(Math.abs(snap.net));
+  g('v-net').style.color = snap.net>=0 ? C.mem : C.fric;
+
+  if (beMonth !== null) {
+    g('v-be').textContent = beMonth+' '+t.mo;
+    g('v-be').style.color = beMonth<=18 ? C.mem : C.warn;
+  } else {
+    g('v-be').textContent = '>24 '+t.mo;
+    g('v-be').style.color = C.fric;
+  }
+
+  g('pt-adult').textContent = fmtM(snap.mix[0]);
+  g('pt-fnd').textContent = fmtM(snap.mix[1]);
+  g('pt-yth').textContent = fmtM(snap.mix[2]);
+  g('pt-oth').textContent = fmtM(snap.mix[3] + snap.mix[4]);
+  g('pt-cap').textContent = '$'+Math.round(initHole/1e6)+'M';
+  g('pt-fric').textContent = fmtM(snap.cmix[2] + snap.cmix[3]);
+  g('pt-ops').textContent = fmtM(snap.cmix[0] + snap.cmix[1]);
+
+  // Charts
+  pChart.data.datasets[0].data = cumSeries;
+  pChart.data.datasets[0].borderColor = cum>0 ? C.mem : C.fric;
+  pChart.data.datasets[0].backgroundColor = cum>0 ? 'rgba(29,158,117,0.1)' : 'rgba(226,75,74,0.1)';
+  pChart.data.datasets[1].data = Array(24).fill(maxDrawdown/1e6);
+  pChart.update('none');
+
+  bChart.data.labels = [t.l_mem, t.l_fnd, t.l_yth, t.l_oth, t.l_caf];
+  bChart.data.datasets[0].data = snap.mix;
+  bChart.update('none');
+
+  const totR = snap.mix.reduce((a,b)=>a+b,0);
+  const colsR = [C.mem, C.fnd, C.youth, C.dp, C.cafe];
+  g('leg').innerHTML = bChart.data.labels.map((lbl,i)=>{
+    const pct = totR>0?Math.round(snap.mix[i]/totR*100):0;
+    return `<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:${colsR[i]}"></span>${lbl} ${pct}%</span>`;
   }).join('');
 
-  const ramp=[0.25,0.40,0.55,0.68,0.80,0.90,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1];
-  let cum=-(effBc/1e6);
-  pChart.data.datasets[0].data=ramp.map(r=>{ cum+=(totalRev*r-costs)/1e6; return Math.round(cum*10)/10; });
-  pChart.data.datasets[0].borderColor=netMo>0?C.mem:C.neg;
-  pChart.data.datasets[0].backgroundColor=netMo>0?'rgba(29,158,117,0.07)':'rgba(226,75,74,0.07)';
-  pChart.update('none');
+  cChart.data.labels = [t.l_pay, t.l_ops, t.l_own, t.l_tax];
+  cChart.data.datasets[0].data = snap.cmix;
+  cChart.update('none');
+
+  const totC = snap.cmix.reduce((a,b)=>a+b,0);
+  const colsC = [C.pay, C.util, C.warn, C.fric];
+  g('cleg').innerHTML = cChart.data.labels.map((lbl,i)=>{
+    const pct = totC>0?Math.round(snap.cmix[i]/totC*100):0;
+    return `<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:${colsC[i]}"></span>${lbl} ${pct}%</span>`;
+  }).join('');
 }
 
-const map={'s-mem':['d-mem',v=>v],'s-mp':['d-mp',v=>v+'k'],'s-dp':['d-dp',v=>v],'s-dpp':['d-dpp',v=>v+'k'],'s-c':['d-c',v=>v],'s-cs':['d-cs',v=>v],'s-cp':['d-cp',v=>v+'k'],'s-gr':['d-gr',v=>parseFloat(v).toFixed(1)+'M'],'s-fc':['d-fc',v=>parseFloat(v).toFixed(1)+'M'],'s-bc':['d-bc',v=>v+'M'],'s-fm':['d-fm',v=>v],'s-fmp':['d-fmp',v=>v+'k']};
-Object.entries(map).forEach(([sid,[did,fmt]])=>{ const el=g(sid); el.addEventListener('input',()=>{ g(did).textContent=fmt(el.value); run(); }); });
+const sliderMap = {
+  's-sm':['d-sm',v=>v], 's-nm':['d-nm',v=>v], 's-ch':['d-ch',v=>v+'%'], 's-mp':['d-mp',v=>v+'k'], 's-pmx':['d-pmx',v=>v+'%'], 's-pdi':['d-pdi',v=>v+'%'],
+  's-fm':['d-fm',v=>v], 's-fup':['d-fup',v=>v+'k'], 's-flk':['d-flk',v=>v+'k'],
+  's-yk':['d-yk',v=>v], 's-yp':['d-yp',v=>v+'k'], 's-ycp':['d-ycp',v=>parseFloat(v).toFixed(1)+'M'],
+  's-dp':['d-dp',v=>v], 's-dpp':['d-dpp',v=>v+'k'], 's-cat':['d-cat',v=>v+'%'], 's-csp':['d-csp',v=>parseFloat(v).toFixed(1)+'k'], 's-c':['d-c',v=>v], 's-cp':['d-cp',v=>v+'k'],
+  's-bc':['d-bc',v=>v+'M'], 's-pob':['d-pob',v=>v+'M'], 's-vac':['d-vac',v=>v+'%'],
+  's-od':['d-od',v=>parseFloat(v).toFixed(1)+'M'], 's-tax':['d-tax',v=>parseFloat(v).toFixed(1)+'%'], 's-fee':['d-fee',v=>parseFloat(v).toFixed(1)+'%'], 's-esc':['d-esc',v=>v+'%'],
+  's-hc':['d-hc',v=>parseFloat(v).toFixed(1)+'M'], 's-fd':['d-fd',v=>parseFloat(v).toFixed(1)+'M'], 's-cl':['d-cl',v=>parseFloat(v).toFixed(1)+'M'], 's-pf':['d-pf',v=>parseFloat(v).toFixed(2)+'×'], 's-el':['d-el',v=>parseFloat(v).toFixed(1)+'M'], 's-hm':['d-hm',v=>parseFloat(v).toFixed(1)+'M']
+};
+Object.entries(sliderMap).forEach(([sid,[did,fmt]])=>{
+  const el=g(sid);
+  el.addEventListener('input',()=>{ g(did).textContent=fmt(el.value); run(); });
+});
 run();
 </script>
 </body>
 </html>
+
+```

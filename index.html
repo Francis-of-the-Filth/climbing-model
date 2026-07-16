@@ -1,16 +1,9 @@
-This rebuilt forecasting engine (v5) directly addresses the structural and financial gaps identified in your model's architecture.
-
-It implements the precise term-based calendar logic for the Colombian school year (opening in March), splits out founding members to track their revenue dilution, introduces the maximum drawdown metric to show your true capital requirements, and factors in real-world operational frictions like taxes, payment processing, and annual wage escalation.
-
-Save the code block below as an `.html` file and open it in any web browser.
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Climbing Gym Model v5</title>
+<title>Climbing Gym Model v6 (Investor Grade)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -22,12 +15,20 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; p
 .lbtn { padding:5px 14px; background:transparent; border:none; cursor:pointer; color:#666; font-size:12px; font-family:inherit; font-weight:600; }
 .lbtn.active { background:#1a1a1a; color:#fff }
 
+/* Scenarios */
+.scenarios { display:flex; gap:8px; margin-bottom: 16px; background:#fff; padding:10px; border-radius:8px; border:1px solid #eee; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+.preset-btn { flex:1; padding:8px 0; border:1px solid #ddd; background:#fafaf8; border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; color:#444; transition:all 0.2s; }
+.preset-btn:hover { background:#eee; }
+.preset-btn.active { background:#1a1a1a; color:#fff; border-color:#1a1a1a; }
+
 /* Metrics */
 .grid6 { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px; margin-bottom:1.5rem }
-.mcard { background:#fff; border:1px solid #eee; border-radius:10px; padding:12px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+.mcard { background:#fff; border:1px solid #eee; border-radius:10px; padding:12px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); position:relative; }
 .mlbl { font-size:10px; color:#888; margin:0 0 4px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em }
 .mval { font-size:18px; font-weight:700; margin:0; color:#1a1a1a }
 .mval.warn { color:#D85A30; }
+
+.cap-warn { display:none; position:absolute; top:-8px; right:-8px; background:#E24B4A; color:#fff; font-size:9px; padding:2px 6px; border-radius:4px; font-weight:700; letter-spacing:0.05em; box-shadow: 0 2px 4px rgba(226,75,74,0.3); }
 
 /* Layout grids */
 .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom: 16px; }
@@ -63,22 +64,36 @@ input[type=range] { width:100%; cursor:pointer; accent-color:#1D9E75; height: 4p
 .chartpanel { background:#fff; border:1px solid #eee; border-radius:12px; padding:16px; margin-bottom:16px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
 .csec { font-size:12px; font-weight:700; color:#444; letter-spacing:0.04em; text-transform:uppercase; margin-bottom:12px }
 
+.export-btn { display:block; width:100%; padding:14px; background:#1D9E75; color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; transition: background 0.2s; text-align:center; }
+.export-btn:hover { background:#16805e; }
+
 @media (max-width:768px){ .grid2{grid-template-columns:1fr !important} .grid6{grid-template-columns:repeat(3,1fr) !important; gap: 8px;} }
 </style>
 </head>
 <body>
 
 <div class="hdr">
-  <span class="htitle" id="t-title">Climbing Gym — Model v5</span>
+  <span class="htitle" id="t-title">Climbing Gym — Model v6</span>
   <div class="ltog">
     <button class="lbtn active" id="btn-en" onclick="setLang('en')">EN</button>
     <button class="lbtn" id="btn-es" onclick="setLang('es')">ES</button>
   </div>
 </div>
 
+<!-- SCENARIO PRESETS -->
+<div class="scenarios">
+  <button class="preset-btn" id="btn-cons" onclick="setScenario('cons')">Conservative</button>
+  <button class="preset-btn active" id="btn-base" onclick="setScenario('base')">Base Case</button>
+  <button class="preset-btn" id="btn-opt" onclick="setScenario('opt')">Optimistic</button>
+</div>
+
 <!-- TOP METRICS -->
 <div class="grid6">
-  <div class="mcard"><p class="mlbl" id="l-m24">Members @ Mo 24</p><p class="mval" id="v-m24">—</p></div>
+  <div class="mcard">
+    <span class="cap-warn" id="cap-warn">⚠️ CAP</span>
+    <p class="mlbl" id="l-m24">Members @ Mo 24</p>
+    <p class="mval" id="v-m24">—</p>
+  </div>
   <div class="mcard"><p class="mlbl" id="l-rev">Revenue @ Mo 24</p><p class="mval" id="v-rev">—</p></div>
   <div class="mcard"><p class="mlbl" id="l-ebitda">EBITDA Margin</p><p class="mval" id="v-ebitda">—</p></div>
   <div class="mcard"><p class="mlbl" id="l-be">Break-even</p><p class="mval" id="v-be">—</p></div>
@@ -146,6 +161,7 @@ input[type=range] { width:100%; cursor:pointer; accent-color:#1D9E75; height: 4p
 
   <div class="panel ops">
     <div class="phead"><span class="ptitle" id="l-crew">Payroll & Operations</span><span class="ptotal negc"><span id="pt-ops">—</span></span></div>
+    <div class="srow"><div class="slbls"><span id="l-rnt">Monthly Rent (COP M)</span><span id="d-rnt">8.0M</span></div><input type="range" min="2" max="20" step="0.5" value="8.0" id="s-rnt"></div>
     <div class="srow"><div class="slbls"><span id="l-hc">Head coach / setter (COP M)</span><span id="d-hc">2.5M</span></div><input type="range" min="1.8" max="4" step="0.1" value="2.5" id="s-hc"></div>
     <div class="srow"><div class="slbls"><span id="l-fd">Front desk & admin (COP M)</span><span id="d-fd">1.6M</span></div><input type="range" min="1.4" max="3.5" step="0.1" value="1.6" id="s-fd"></div>
     <div class="srow"><div class="slbls"><span id="l-cl">Cleaning/Maint. (COP M)</span><span id="d-cl">1.0M</span></div><input type="range" min="0" max="2" step="0.1" value="1.0" id="s-cl"></div>
@@ -175,16 +191,19 @@ input[type=range] { width:100%; cursor:pointer; accent-color:#1D9E75; height: 4p
   <div style="position:relative;width:100%;height:200px"><canvas id="pc"></canvas></div>
 </div>
 
+<button class="export-btn" id="l-exp" onclick="exportCSV()">Download Financials (CSV)</button>
+
 <script>
 const g = id => document.getElementById(id);
 const C = { mem:'#1D9E75', youth:'#D85A30', course:'#EF9F27', dp:'#378ADD', cafe:'#9B59B6', 
-            pay:'#D85A30', util:'#378ADD', fric:'#E24B4A', fnd:'#7F77DD', 
+            pay:'#D85A30', util:'#378ADD', fric:'#E24B4A', fnd:'#7F77DD', rent:'#1a1a1a',
             warn:'#BA7517', bg:'#f0f0f0' };
 let lang = 'en';
+let globalCSVData = [];
 
 const i18n = {
   en: {
-    title: 'Climbing Gym — Model v5',
+    title: 'Climbing Gym — Model v6',
     m24:'Members @ Mo 24', rev:'Revenue @ Mo 24', ebitda:'EBITDA Margin', be:'Break-even', draw:'Max Drawdown', net:'Net Inc @ Mo 24',
     adult:'Base Memberships', fnd:'Founders (Locked Capacity)', yth:'Term-Based Youth & Camps', oth:'Ancillary', cap:'Capital & Seasonality', fric:'Financial Frictions & Owner', crew:'Payroll & Operations',
     rm:'Revenue Mix @ Mo 24', cm:'Cost Mix @ Mo 24', proj:'24-Mo Cumulative Cash Flow (COP M) — Opens March',
@@ -194,14 +213,15 @@ const i18n = {
     dp:'Day passes / mo', dpp:'Day pass price (COP k)', cat:'Café attachment (% of visits)', csp:'Café gross profit / visit (COP k)', c:'Courses / mo', cp:'Course price (COP k)',
     bc:'Build cost (COP M)', pob:'Pre-opening burn (COP M)', vac:'Vacation dip (Dec/Jan)',
     od:'Owner draw (COP M/mo)', tax:'Taxes (% gross rev)', fee:'Payment fees (2.5% on 70% vol)', esc:'Year 2 cost escalation',
-    hc:'Head coach / setter (COP M)', fd:'Front desk & admin (COP M)', cl:'Cleaning/Maint. (COP M)', pf:'Prestaciones multiplier', el:'Electricity & Utilities (COP M)', hm:'Fixed overhead (Ins, Mktg, Acc)',
+    rnt:'Monthly Rent (COP M)', hc:'Head coach / setter (COP M)', fd:'Front desk & admin (COP M)', cl:'Cleaning/Maint. (COP M)', pf:'Prestaciones multiplier', el:'Electricity & Utilities (COP M)', hm:'Fixed overhead (Ins, Mktg, Acc)',
     fndnote:'Founders offset build cost upfront, but consume capacity at a locked discount forever.',
     ythnote:'Terms: Feb-Jun & Aug-Nov. Camps: Jul, Dec, Jan.',
     l_mem:'Base', l_fnd:'Founders', l_yth:'Youth', l_oth:'Pass/Course', l_caf:'Café',
-    l_pay:'Payroll', l_ops:'Ops', l_own:'Owner', l_tax:'Tax/Fee', mo:'mo'
+    l_pay:'Payroll', l_ops:'Ops', l_rent:'Rent', l_own:'Owner', l_tax:'Tax/Fee', mo:'mo', exp:'Download Financials (CSV)',
+    btn_cons:'Conservative', btn_base:'Base Case', btn_opt:'Optimistic'
   },
   es: {
-    title: 'Gimnasio de Escalada — Modelo v5',
+    title: 'Gimnasio de Escalada — Modelo v6',
     m24:'Miembros @ Mes 24', rev:'Ingresos @ Mes 24', ebitda:'Margen EBITDA', be:'Punto Equilibrio', draw:'Agujero Máximo', net:'Neto @ Mes 24',
     adult:'Membresías Base', fnd:'Fundadores (Capacidad Fija)', yth:'Juvenil por Ciclos y Vacaciones', oth:'Adicionales', cap:'Capital y Estacionalidad', fric:'Fricción Financiera y Dueño', crew:'Nómina y Operaciones',
     rm:'Mix Ingresos @ Mes 24', cm:'Mix Costos @ Mes 24', proj:'Flujo de Caja Acumulado (24 Meses) — Apertura Marzo',
@@ -211,11 +231,12 @@ const i18n = {
     dp:'Pases diarios / mes', dpp:'Precio pase (COP k)', cat:'Conversión café (% visitas)', csp:'Utilidad café / visita (COP k)', c:'Cursos / mes', cp:'Precio curso (COP k)',
     bc:'Costo construcción (COP M)', pob:'Quema pre-apertura (COP M)', vac:'Baja vacacional (Dic/Ene)',
     od:'Retiro dueño (COP M/mes)', tax:'Impuestos (% ingr. bruto)', fee:'Comisión TC (2.5% al 70%)', esc:'Inflación costos Año 2',
-    hc:'Entrenador jefe (COP M)', fd:'Recepción y admin (COP M)', cl:'Aseo/Mantenimiento (COP M)', pf:'Multiplicador prestaciones', el:'Electricidad y Serv. (COP M)', hm:'Gastos fijos (Seguro, Mktg)',
+    rnt:'Alquiler mensual (COP M)', hc:'Entrenador jefe (COP M)', fd:'Recepción y admin (COP M)', cl:'Aseo/Mantenimiento (COP M)', pf:'Multiplicador prestaciones', el:'Electricidad y Serv. (COP M)', hm:'Gastos fijos (Seguro, Mktg)',
     fndnote:'Los fundadores reducen el costo inicial, pero ocupan capacidad con descuento de por vida.',
     ythnote:'Ciclos: Feb-Jun y Ago-Nov. Vacaciones: Jul, Dic, Ene.',
     l_mem:'Base', l_fnd:'Fundad.', l_yth:'Juv', l_oth:'Pase/Curso', l_caf:'Café',
-    l_pay:'Nómina', l_ops:'Operativo', l_own:'Dueño', l_tax:'Imp/Comis', mo:'meses'
+    l_pay:'Nómina', l_ops:'Operativo', l_rent:'Alquiler', l_own:'Dueño', l_tax:'Imp/Comis', mo:'meses', exp:'Descargar Datos (CSV)',
+    btn_cons:'Conservador', btn_base:'Caso Base', btn_opt:'Optimista'
   }
 };
 
@@ -229,8 +250,9 @@ const labelMap = {
   'l-dp':'dp','l-dpp':'dpp','l-cat':'cat','l-csp':'csp','l-c':'c','l-cp':'cp',
   'l-bc':'bc','l-pob':'pob','l-vac':'vac',
   'l-od':'od','l-tax':'tax','l-fee':'fee','l-esc':'esc',
-  'l-hc':'hc','l-fd':'fd','l-cl':'cl','l-pf':'pf','l-el':'el','l-hm':'hm',
-  'l-fndnote':'fndnote','l-ythnote':'ythnote'
+  'l-rnt':'rnt','l-hc':'hc','l-fd':'fd','l-cl':'cl','l-pf':'pf','l-el':'el','l-hm':'hm',
+  'l-fndnote':'fndnote','l-ythnote':'ythnote','l-exp':'exp',
+  'btn-cons':'btn_cons','btn-base':'btn_base','btn-opt':'btn_opt'
 };
 
 function setLang(l) {
@@ -243,6 +265,27 @@ function setLang(l) {
   run();
 }
 
+// Preset Definitions
+const presets = {
+  cons: { 's-sm':30, 's-nm':10, 's-ch':10, 's-rnt':12, 's-bc':450, 's-pob':40, 's-pmx':10, 's-yk':15, 's-fm':10 },
+  base: { 's-sm':50, 's-nm':15, 's-ch':7.5, 's-rnt':8, 's-bc':400, 's-pob':20, 's-pmx':20, 's-yk':25, 's-fm':15 },
+  opt:  { 's-sm':80, 's-nm':25, 's-ch':5,  's-rnt':6, 's-bc':350, 's-pob':15, 's-pmx':30, 's-yk':40, 's-fm':25 }
+};
+
+function setScenario(type) {
+  ['cons', 'base', 'opt'].forEach(s => g('btn-' + s).classList.remove('active'));
+  g('btn-' + type).classList.add('active');
+  
+  const target = presets[type];
+  for (let key in target) {
+    let el = g(key);
+    if(el) {
+      el.value = target[key];
+      el.dispatchEvent(new Event('input')); // Triggers the label update naturally
+    }
+  }
+}
+
 const gridColor = 'rgba(0,0,0,0.05)';
 let bChart = new Chart(g('bc'), {
   type:'doughnut', data:{ labels:[], datasets:[{ data:[1,1,1,1,1], backgroundColor:[C.mem,C.fnd,C.youth,C.dp,C.cafe], borderWidth:0 }] },
@@ -250,7 +293,7 @@ let bChart = new Chart(g('bc'), {
 });
 
 let cChart = new Chart(g('cc'), {
-  type:'doughnut', data:{ labels:[], datasets:[{ data:[1,1,1,1], backgroundColor:[C.pay,C.util,C.warn,C.fric], borderWidth:0 }] },
+  type:'doughnut', data:{ labels:[], datasets:[{ data:[1,1,1,1,1], backgroundColor:[C.pay,C.util,C.rent,C.warn,C.fric], borderWidth:0 }] },
   options:{ responsive:true, maintainAspectRatio:false, cutout:'65%', plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c=>' $'+(c.parsed/1e6).toFixed(1)+'M' } } } }
 });
 
@@ -276,7 +319,7 @@ function run() {
     dp:+g('s-dp').value, dpp:+g('s-dpp').value, cat:+g('s-cat').value, csp:+g('s-csp').value, c:+g('s-c').value, cp:+g('s-cp').value,
     bc:+g('s-bc').value, pob:+g('s-pob').value, vac:+g('s-vac').value,
     od:+g('s-od').value, tax:+g('s-tax').value, fee:+g('s-fee').value, esc:+g('s-esc').value,
-    hc:+g('s-hc').value, fd:+g('s-fd').value, cl:+g('s-cl').value, pf:+g('s-pf').value, el:+g('s-el').value, hm:+g('s-hm').value
+    rnt:+g('s-rnt').value, hc:+g('s-hc').value, fd:+g('s-fd').value, cl:+g('s-cl').value, pf:+g('s-pf').value, el:+g('s-el').value, hm:+g('s-hm').value
   };
   const t = i18n[lang];
 
@@ -290,6 +333,8 @@ function run() {
   let beMonth = null;
   const cumSeries = [];
   let snap = null;
+  
+  globalCSVData = []; // Reset CSV data
 
   for (let m = 0; m < 24; m++) {
     // Escalate costs in year 2
@@ -305,17 +350,17 @@ function run() {
     // Memberships
     const churnLoss = regMembers * (v.ch / 100);
     regMembers = Math.max(0, regMembers + (v.nm * ramp * vacF) - churnLoss);
-    const effMp = v.mp * (1 - (v.pmx/100 * v.pdi/100)); // Blended average rate given prepaid mix
+    const effMp = v.mp * (1 - (v.pmx/100 * v.pdi/100)); 
     
     const rReg = regMembers * effMp * 1e3;
     const rFnd = v.fm * v.flk * 1e3;
 
     // Youth
-    const rYth = isCamp ? (v.ycp * 1e6) : ((v.yk * v.yp * 1e3) / 4); // Amortize term fee over 4 months
+    const rYth = isCamp ? (v.ycp * 1e6) : ((v.yk * v.yp * 1e3) / 4); 
     
     // Ancillary
-    const rOth = ((v.dp * v.dpp) + (v.c * 8 * v.cp * (isVac?0.5:1))) * 1e3; // 8 students per course
-    const monthlyVisits = (regMembers + v.fm) * 1.5 * 4.3 * vacF; // 1.5 visits/week
+    const rOth = ((v.dp * v.dpp) + (v.c * 8 * v.cp * (isVac?0.5:1))) * 1e3;
+    const monthlyVisits = (regMembers + v.fm) * 1.5 * 4.3 * vacF; 
     const rCaf = monthlyVisits * (v.cat/100) * v.csp * 1e3;
 
     const totalRev = rReg + rFnd + rYth + rOth + rCaf;
@@ -323,11 +368,12 @@ function run() {
     // Expenses
     const payroll = (v.hc + v.fd + v.cl) * v.pf * y2f * 1e6;
     const ops = (v.el + v.hm) * y2f * 1e6;
+    const rent = v.rnt * y2f * 1e6;
     const fric = totalRev * (v.tax/100 + v.fee/100);
     const owner = v.od * 1e6;
     
-    const totalCost = payroll + ops + fric + owner;
-    const ebitda = totalRev - payroll - ops; // Pre-tax, pre-owner
+    const totalCost = payroll + ops + rent + fric + owner;
+    const ebitda = totalRev - payroll - ops - rent; // Pre-tax, pre-owner
     const net = totalRev - totalCost;
 
     cum += net;
@@ -335,16 +381,34 @@ function run() {
     if (beMonth === null && cum >= 0) beMonth = m + 1;
     
     cumSeries.push(Math.round(cum/1e6));
+    
+    // Push month data for CSV
+    globalCSVData.push({
+      month: m + 1,
+      total_members: Math.round(regMembers + v.fm),
+      revenue: totalRev,
+      payroll: payroll,
+      rent: rent,
+      operations: ops,
+      taxes_fees: fric,
+      owner_draw: owner,
+      total_cost: totalCost,
+      net_income: net,
+      cumulative_cash: cum
+    });
 
     if (m === 23) {
       snap = { rev: totalRev, net, ebitdaMargin: (ebitda/totalRev)*100, 
                mix: [rReg, rFnd, rYth, rOth, rCaf],
-               cost: totalCost, cmix: [payroll, ops, owner, fric] };
+               cost: totalCost, cmix: [payroll, ops, rent, owner, fric] };
     }
   }
 
   // UI Updates
-  g('v-m24').textContent = Math.round(regMembers + v.fm);
+  const finalMembers = Math.round(regMembers + v.fm);
+  g('v-m24').textContent = finalMembers;
+  g('cap-warn').style.display = finalMembers > 500 ? 'block' : 'none'; // Capacity logic
+
   g('v-rev').textContent = fmtM(snap.rev);
   
   const em = Math.round(snap.ebitdaMargin);
@@ -370,8 +434,8 @@ function run() {
   g('pt-yth').textContent = fmtM(snap.mix[2]);
   g('pt-oth').textContent = fmtM(snap.mix[3] + snap.mix[4]);
   g('pt-cap').textContent = '$'+Math.round(initHole/1e6)+'M';
-  g('pt-fric').textContent = fmtM(snap.cmix[2] + snap.cmix[3]);
-  g('pt-ops').textContent = fmtM(snap.cmix[0] + snap.cmix[1]);
+  g('pt-fric').textContent = fmtM(snap.cmix[3] + snap.cmix[4]);
+  g('pt-ops').textContent = fmtM(snap.cmix[0] + snap.cmix[1] + snap.cmix[2]);
 
   // Charts
   pChart.data.datasets[0].data = cumSeries;
@@ -391,16 +455,34 @@ function run() {
     return `<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:${colsR[i]}"></span>${lbl} ${pct}%</span>`;
   }).join('');
 
-  cChart.data.labels = [t.l_pay, t.l_ops, t.l_own, t.l_tax];
+  cChart.data.labels = [t.l_pay, t.l_ops, t.l_rent, t.l_own, t.l_tax];
   cChart.data.datasets[0].data = snap.cmix;
   cChart.update('none');
 
   const totC = snap.cmix.reduce((a,b)=>a+b,0);
-  const colsC = [C.pay, C.util, C.warn, C.fric];
+  const colsC = [C.pay, C.util, C.rent, C.warn, C.fric];
   g('cleg').innerHTML = cChart.data.labels.map((lbl,i)=>{
     const pct = totC>0?Math.round(snap.cmix[i]/totC*100):0;
     return `<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:${colsC[i]}"></span>${lbl} ${pct}%</span>`;
   }).join('');
+}
+
+// CSV Exporter
+function exportCSV() {
+  const headers = "Month,Total_Members,Revenue_COP,Payroll_COP,Rent_COP,Operations_COP,Taxes_and_Fees_COP,Owner_Draw_COP,Total_Cost_COP,Net_Income_COP,Cumulative_Cash_COP\n";
+  const rows = globalCSVData.map(r => 
+    `${r.month},${r.total_members},${r.revenue.toFixed(2)},${r.payroll.toFixed(2)},${r.rent.toFixed(2)},${r.operations.toFixed(2)},${r.taxes_fees.toFixed(2)},${r.owner_draw.toFixed(2)},${r.total_cost.toFixed(2)},${r.net_income.toFixed(2)},${r.cumulative_cash.toFixed(2)}`
+  ).join("\n");
+  
+  const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.setAttribute("href", url);
+  link.setAttribute("download", "climbing_gym_forecast_v6.csv");
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 const sliderMap = {
@@ -410,7 +492,7 @@ const sliderMap = {
   's-dp':['d-dp',v=>v], 's-dpp':['d-dpp',v=>v+'k'], 's-cat':['d-cat',v=>v+'%'], 's-csp':['d-csp',v=>parseFloat(v).toFixed(1)+'k'], 's-c':['d-c',v=>v], 's-cp':['d-cp',v=>v+'k'],
   's-bc':['d-bc',v=>v+'M'], 's-pob':['d-pob',v=>v+'M'], 's-vac':['d-vac',v=>v+'%'],
   's-od':['d-od',v=>parseFloat(v).toFixed(1)+'M'], 's-tax':['d-tax',v=>parseFloat(v).toFixed(1)+'%'], 's-fee':['d-fee',v=>parseFloat(v).toFixed(1)+'%'], 's-esc':['d-esc',v=>v+'%'],
-  's-hc':['d-hc',v=>parseFloat(v).toFixed(1)+'M'], 's-fd':['d-fd',v=>parseFloat(v).toFixed(1)+'M'], 's-cl':['d-cl',v=>parseFloat(v).toFixed(1)+'M'], 's-pf':['d-pf',v=>parseFloat(v).toFixed(2)+'×'], 's-el':['d-el',v=>parseFloat(v).toFixed(1)+'M'], 's-hm':['d-hm',v=>parseFloat(v).toFixed(1)+'M']
+  's-rnt':['d-rnt',v=>parseFloat(v).toFixed(1)+'M'], 's-hc':['d-hc',v=>parseFloat(v).toFixed(1)+'M'], 's-fd':['d-fd',v=>parseFloat(v).toFixed(1)+'M'], 's-cl':['d-cl',v=>parseFloat(v).toFixed(1)+'M'], 's-pf':['d-pf',v=>parseFloat(v).toFixed(2)+'×'], 's-el':['d-el',v=>parseFloat(v).toFixed(1)+'M'], 's-hm':['d-hm',v=>parseFloat(v).toFixed(1)+'M']
 };
 Object.entries(sliderMap).forEach(([sid,[did,fmt]])=>{
   const el=g(sid);

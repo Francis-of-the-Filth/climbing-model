@@ -1,9 +1,10 @@
+**Model v8**. 
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Climbing Gym Model v7 (Dark UI)</title>
+<title>Climbing Gym Model v8 (Interactive Pitch Deck)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -34,10 +35,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; p
 .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom: 16px; }
 
 /* Category panels */
-.panel { background:#1e293b; border:1px solid #334155; border-radius:12px; padding:20px; margin-bottom:16px; border-left:4px solid #475569; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+.panel { background:#1e293b; border:1px solid #334155; border-radius:12px; padding:20px; margin-bottom:16px; border-left:4px solid #475569; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); transition: opacity 0.3s; }
 .panel.rev  { border-left-color:#34d399 }
 .panel.fnd  { border-left-color:#a78bfa }
 .panel.yth  { border-left-color:#fb923c }
+.panel.anc  { border-left-color:#38bdf8 }
 .panel.ops  { border-left-color:#60a5fa }
 .panel.capx { border-left-color:#818cf8 }
 .panel.fric { border-left-color:#fb7185 }
@@ -49,11 +51,20 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; p
 .ptotal.negc { color:#fb7185 }
 .psub { font-size:11px; color:#64748b; font-weight:500; margin-left:6px }
 
-.srow { margin-bottom:16px }
-.srow:last-child { margin-bottom:0 }
-.slbls { display:flex; justify-content:space-between; margin-bottom:6px; font-size:13px }
-.slbls span:first-child { color:#cbd5e1; font-weight: 500; }
+.srow { margin-bottom:16px; transition: opacity 0.2s; }
+.srow.disabled { opacity: 0.4; pointer-events: none; }
+.slbls { display:flex; justify-content:space-between; margin-bottom:6px; font-size:13px; align-items: center; }
+.lbl-wrap { display: flex; align-items: center; color:#cbd5e1; font-weight: 500; }
 .slbls span:last-child { font-weight:700; color:#f8fafc; font-variant-numeric: tabular-nums; background: #0f172a; padding: 2px 8px; border-radius: 4px; font-size: 12px;}
+
+/* Custom Toggles */
+.switch { position: relative; display: inline-block; width: 28px; height: 16px; margin-right: 8px; flex-shrink: 0; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.tslider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #334155; transition: .2s; border-radius: 16px; }
+.tslider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 2px; bottom: 2px; background-color: #94a3b8; transition: .2s; border-radius: 50%; }
+input:checked + .tslider { background-color: #10b981; }
+input:checked + .tslider:before { transform: translateX(12px); background-color: #fff; }
+.phead .switch { margin-right: 12px; }
 
 /* Custom Slider Styling */
 input[type=range] { -webkit-appearance: none; width:100%; background: transparent; cursor:pointer; height: 6px; border-radius: 3px; }
@@ -61,6 +72,7 @@ input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; bac
 input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #34d399; margin-top: -5px; box-shadow: 0 0 10px rgba(52, 211, 153, 0.4); }
 
 .panel.yth input[type=range]::-webkit-slider-thumb, .panel.fric input[type=range]::-webkit-slider-thumb { background: #fb923c; box-shadow: 0 0 10px rgba(251, 146, 60, 0.4);}
+.panel.anc input[type=range]::-webkit-slider-thumb { background: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);}
 .panel.fnd input[type=range]::-webkit-slider-thumb { background: #a78bfa; box-shadow: 0 0 10px rgba(167, 139, 250, 0.4);}
 .panel.ops input[type=range]::-webkit-slider-thumb { background: #60a5fa; box-shadow: 0 0 10px rgba(96, 165, 250, 0.4);}
 .panel.capx input[type=range]::-webkit-slider-thumb { background: #818cf8; box-shadow: 0 0 10px rgba(129, 140, 248, 0.4);}
@@ -78,7 +90,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px
 <body>
 
 <div class="hdr">
-  <span class="htitle" id="t-title">Climbing Gym — Model v7</span>
+  <span class="htitle" id="t-title">Climbing Gym — Model v8</span>
   <div class="ltog">
     <button class="lbtn active" id="btn-en" onclick="setLang('en')">EN</button>
     <button class="lbtn" id="btn-es" onclick="setLang('es')">ES</button>
@@ -111,68 +123,113 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px
 <div>
   
   <div class="panel rev">
-    <div class="phead"><span class="ptitle" id="l-adult">Base Memberships</span><span class="ptotal pos"><span id="pt-adult">—</span></span></div>
-    <div class="srow"><div class="slbls"><span id="l-sm">Starting members</span><span id="d-sm">50</span></div><input type="range" min="0" max="150" step="5" value="50" id="s-sm"></div>
-    <div class="srow"><div class="slbls"><span id="l-nm">New members / month</span><span id="d-nm">15</span></div><input type="range" min="0" max="50" step="1" value="15" id="s-nm"></div>
-    <div class="srow"><div class="slbls"><span id="l-ch">Monthly churn (CWA baseline)</span><span id="d-ch">7.5%</span></div><input type="range" min="3" max="15" step="0.5" value="7.5" id="s-ch"></div>
-    <div class="srow"><div class="slbls"><span id="l-mp">Price (COP k/mo)</span><span id="d-mp">150k</span></div><input type="range" min="100" max="250" step="5" value="150" id="s-mp"></div>
-    <div class="srow"><div class="slbls"><span id="l-pmx">Prepaid mix (Quarterly/Annual)</span><span id="d-pmx">20%</span></div><input type="range" min="0" max="60" step="5" value="20" id="s-pmx"></div>
-    <div class="srow"><div class="slbls"><span id="l-pdi">Prepaid effective discount</span><span id="d-pdi">15%</span></div><input type="range" min="0" max="30" step="1" value="15" id="s-pdi"></div>
+    <div class="phead">
+      <div class="lbl-wrap">
+        <label class="switch"><input type="checkbox" id="tc-rev" checked onchange="toggleCat('rev', this.checked)"><span class="tslider"></span></label>
+        <span class="ptitle" id="l-adult">Base Memberships</span>
+      </div>
+      <span class="ptotal pos"><span id="pt-adult">—</span></span>
+    </div>
+    <div class="srow" id="r-sm"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-sm" checked><span class="tslider"></span></label><span id="l-sm">Starting members</span></span><span id="d-sm">50</span></div><input type="range" min="0" max="150" step="5" value="50" id="s-sm"></div>
+    <div class="srow" id="r-nm"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-nm" checked><span class="tslider"></span></label><span id="l-nm">New members / month</span></span><span id="d-nm">15</span></div><input type="range" min="0" max="50" step="1" value="15" id="s-nm"></div>
+    <div class="srow" id="r-ch"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-ch" checked><span class="tslider"></span></label><span id="l-ch">Monthly churn (CWA baseline)</span></span><span id="d-ch">7.5%</span></div><input type="range" min="3" max="15" step="0.5" value="7.5" id="s-ch"></div>
+    <div class="srow" id="r-mp"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-mp" checked><span class="tslider"></span></label><span id="l-mp">Price (COP k/mo)</span></span><span id="d-mp">150k</span></div><input type="range" min="100" max="250" step="5" value="150" id="s-mp"></div>
+    <div class="srow" id="r-pmx"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-pmx" checked><span class="tslider"></span></label><span id="l-pmx">Prepaid mix (Quarterly/Annual)</span></span><span id="d-pmx">20%</span></div><input type="range" min="0" max="60" step="5" value="20" id="s-pmx"></div>
+    <div class="srow" id="r-pdi"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-pdi" checked><span class="tslider"></span></label><span id="l-pdi">Prepaid effective discount</span></span><span id="d-pdi">15%</span></div><input type="range" min="0" max="30" step="1" value="15" id="s-pdi"></div>
   </div>
 
   <div class="panel fnd">
-    <div class="phead"><span class="ptitle" id="l-fnd">Founders (Locked Capacity)</span><span class="ptotal pos" style="color:#a78bfa"><span id="pt-fnd">—</span></span></div>
+    <div class="phead">
+      <div class="lbl-wrap">
+        <label class="switch"><input type="checkbox" id="tc-fnd" checked onchange="toggleCat('fnd', this.checked)"><span class="tslider"></span></label>
+        <span class="ptitle" id="l-fnd">Founders (Locked Capacity)</span>
+      </div>
+      <span class="ptotal pos" style="color:#a78bfa"><span id="pt-fnd">—</span></span>
+    </div>
     <p class="note" id="l-fndnote">Founders offset build cost upfront, but consume capacity at a locked discount forever.</p>
-    <div class="srow"><div class="slbls"><span id="l-fm">Founder count</span><span id="d-fm">15</span></div><input type="range" min="0" max="50" step="1" value="15" id="s-fm"></div>
-    <div class="srow"><div class="slbls"><span id="l-fup">Upfront fee (COP k)</span><span id="d-fup">700k</span></div><input type="range" min="300" max="1500" step="50" value="700" id="s-fup"></div>
-    <div class="srow"><div class="slbls"><span id="l-flk">Locked rate (COP k/mo)</span><span id="d-flk">100k</span></div><input type="range" min="50" max="150" step="5" value="100" id="s-flk"></div>
+    <div class="srow" id="r-fm"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-fm" checked><span class="tslider"></span></label><span id="l-fm">Founder count</span></span><span id="d-fm">15</span></div><input type="range" min="0" max="50" step="1" value="15" id="s-fm"></div>
+    <div class="srow" id="r-fup"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-fup" checked><span class="tslider"></span></label><span id="l-fup">Upfront fee (COP k)</span></span><span id="d-fup">700k</span></div><input type="range" min="300" max="1500" step="50" value="700" id="s-fup"></div>
+    <div class="srow" id="r-flk"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-flk" checked><span class="tslider"></span></label><span id="l-flk">Locked rate (COP k/mo)</span></span><span id="d-flk">100k</span></div><input type="range" min="50" max="150" step="5" value="100" id="s-flk"></div>
   </div>
 
   <div class="panel yth">
-    <div class="phead"><span class="ptitle" id="l-yth">Term-Based Youth & Camps</span><span class="ptotal pos" style="color:#fb923c"><span id="pt-yth">—</span></span></div>
+    <div class="phead">
+      <div class="lbl-wrap">
+        <label class="switch"><input type="checkbox" id="tc-yth" checked onchange="toggleCat('yth', this.checked)"><span class="tslider"></span></label>
+        <span class="ptitle" id="l-yth">Term-Based Youth & Camps</span>
+      </div>
+      <span class="ptotal pos" style="color:#fb923c"><span id="pt-yth">—</span></span>
+    </div>
     <p class="note" id="l-ythnote">Terms: Feb-Jun & Aug-Nov. Camps: Jul, Dec, Jan.</p>
-    <div class="srow"><div class="slbls"><span id="l-yk">Kids / term</span><span id="d-yk">25</span></div><input type="range" min="0" max="80" step="5" value="25" id="s-yk"></div>
-    <div class="srow"><div class="slbls"><span id="l-yp">Term fee (COP k/term)</span><span id="d-yp">240k</span></div><input type="range" min="150" max="400" step="10" value="240" id="s-yp"></div>
-    <div class="srow"><div class="slbls"><span id="l-ycp">Camp revenue (COP M/camp mo)</span><span id="d-ycp">3.0M</span></div><input type="range" min="0" max="10" step="0.5" value="3.0" id="s-ycp"></div>
+    <!-- MVP Cap: max 40 -->
+    <div class="srow" id="r-yk"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-yk" checked><span class="tslider"></span></label><span id="l-yk">Kids / term</span></span><span id="d-yk">25</span></div><input type="range" min="0" max="40" step="1" value="25" id="s-yk"></div>
+    <div class="srow" id="r-yp"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-yp" checked><span class="tslider"></span></label><span id="l-yp">Term fee (COP k/term)</span></span><span id="d-yp">240k</span></div><input type="range" min="150" max="400" step="10" value="240" id="s-yp"></div>
+    <div class="srow" id="r-ycp"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-ycp" checked><span class="tslider"></span></label><span id="l-ycp">Camp revenue (COP M/mo)</span></span><span id="d-ycp">3.0M</span></div><input type="range" min="0" max="10" step="0.5" value="3.0" id="s-ycp"></div>
   </div>
 
-  <div class="panel ops">
-    <div class="phead"><span class="ptitle" id="l-oth">Ancillary</span><span class="ptotal pos" style="color:#60a5fa"><span id="pt-oth">—</span></span></div>
-    <div class="srow"><div class="slbls"><span id="l-dp">Day passes / mo</span><span id="d-dp">40</span></div><input type="range" min="0" max="150" step="5" value="40" id="s-dp"></div>
-    <div class="srow"><div class="slbls"><span id="l-dpp">Day pass price (COP k)</span><span id="d-dpp">32k</span></div><input type="range" min="20" max="60" step="1" value="32" id="s-dpp"></div>
-    <div class="srow"><div class="slbls"><span id="l-cat">Café attachment (% of visits)</span><span id="d-cat">20%</span></div><input type="range" min="0" max="50" step="1" value="20" id="s-cat"></div>
-    <div class="srow"><div class="slbls"><span id="l-csp">Café gross profit / visit (COP k)</span><span id="d-csp">6.0k</span></div><input type="range" min="2" max="15" step="0.5" value="6.0" id="s-csp"></div>
-    <div class="srow"><div class="slbls"><span id="l-c">Courses / mo</span><span id="d-c">3</span></div><input type="range" min="0" max="8" step="1" value="3" id="s-c"></div>
-    <div class="srow"><div class="slbls"><span id="l-cp">Course price (COP k)</span><span id="d-cp">200k</span></div><input type="range" min="100" max="300" step="10" value="200" id="s-cp"></div>
+  <div class="panel anc">
+    <div class="phead">
+      <div class="lbl-wrap">
+        <label class="switch"><input type="checkbox" id="tc-anc" checked onchange="toggleCat('anc', this.checked)"><span class="tslider"></span></label>
+        <span class="ptitle" id="l-oth">Ancillary</span>
+      </div>
+      <span class="ptotal pos" style="color:#38bdf8"><span id="pt-oth">—</span></span>
+    </div>
+    <div class="srow" id="r-dp"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-dp" checked><span class="tslider"></span></label><span id="l-dp">Day passes / mo</span></span><span id="d-dp">40</span></div><input type="range" min="0" max="150" step="5" value="40" id="s-dp"></div>
+    <div class="srow" id="r-dpp"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-dpp" checked><span class="tslider"></span></label><span id="l-dpp">Day pass price (COP k)</span></span><span id="d-dpp">32k</span></div><input type="range" min="20" max="60" step="1" value="32" id="s-dpp"></div>
+    <div class="srow" id="r-cat"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-cat" checked><span class="tslider"></span></label><span id="l-cat">Café attachment (% of visits)</span></span><span id="d-cat">20%</span></div><input type="range" min="0" max="50" step="1" value="20" id="s-cat"></div>
+    <div class="srow" id="r-csp"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-csp" checked><span class="tslider"></span></label><span id="l-csp">Café gross profit / visit (COP k)</span></span><span id="d-csp">6.0k</span></div><input type="range" min="2" max="15" step="0.5" value="6.0" id="s-csp"></div>
+    <!-- MVP Cap: max 4 -->
+    <div class="srow" id="r-c"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-c" checked><span class="tslider"></span></label><span id="l-c">Courses / mo</span></span><span id="d-c">3</span></div><input type="range" min="0" max="4" step="1" value="3" id="s-c"></div>
+    <div class="srow" id="r-cp"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-cp" checked><span class="tslider"></span></label><span id="l-cp">Course price (COP k)</span></span><span id="d-cp">200k</span></div><input type="range" min="100" max="300" step="10" value="200" id="s-cp"></div>
   </div>
 </div>
 
 <!-- RIGHT COLUMN -->
 <div>
   <div class="panel capx">
-    <div class="phead"><span class="ptitle" id="l-cap">Capital & Seasonality</span><span class="ptotal" style="color:#818cf8"><span id="pt-cap">—</span></span></div>
-    <div class="srow"><div class="slbls"><span id="l-bc">Build cost (COP M)</span><span id="d-bc">400M</span></div><input type="range" min="300" max="800" step="10" value="400" id="s-bc"></div>
-    <div class="srow"><div class="slbls"><span id="l-pob">Pre-opening burn (COP M)</span><span id="d-pob">20M</span></div><input type="range" min="0" max="100" step="5" value="20" id="s-pob"></div>
-    <div class="srow"><div class="slbls"><span id="l-vac">Vacation dip (Dec/Jan)</span><span id="d-vac">75%</span></div><input type="range" min="50" max="100" step="5" value="75" id="s-vac"></div>
+    <div class="phead">
+      <div class="lbl-wrap">
+        <label class="switch"><input type="checkbox" id="tc-capx" checked onchange="toggleCat('capx', this.checked)"><span class="tslider"></span></label>
+        <span class="ptitle" id="l-cap">Capital & Seasonality</span>
+      </div>
+      <span class="ptotal" style="color:#818cf8"><span id="pt-cap">—</span></span>
+    </div>
+    <div class="srow" id="r-bc"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-bc" checked><span class="tslider"></span></label><span id="l-bc">Build cost (COP M)</span></span><span id="d-bc">400M</span></div><input type="range" min="300" max="800" step="10" value="400" id="s-bc"></div>
+    <div class="srow" id="r-pob"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-pob" checked><span class="tslider"></span></label><span id="l-pob">Pre-opening burn (COP M)</span></span><span id="d-pob">20M</span></div><input type="range" min="0" max="100" step="5" value="20" id="s-pob"></div>
+    <div class="srow" id="r-vac"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-vac" checked><span class="tslider"></span></label><span id="l-vac">Vacation dip (Dec/Jan)</span></span><span id="d-vac">75%</span></div><input type="range" min="50" max="100" step="5" value="75" id="s-vac"></div>
   </div>
 
   <div class="panel fric">
-    <div class="phead"><span class="ptitle" id="l-fric">Financial Frictions & Owner</span><span class="ptotal negc"><span id="pt-fric">—</span></span></div>
-    <div class="srow"><div class="slbls"><span id="l-od">Owner draw (COP M/mo)</span><span id="d-od">2.0M</span></div><input type="range" min="0" max="10" step="0.5" value="2.0" id="s-od"></div>
-    <div class="srow"><div class="slbls"><span id="l-tax">Taxes (% gross rev)</span><span id="d-tax">4.0%</span></div><input type="range" min="0" max="10" step="0.5" value="4.0" id="s-tax"></div>
-    <div class="srow"><div class="slbls"><span id="l-fee">Payment fees (2.5% on 70% vol)</span><span id="d-fee">1.8%</span></div><input type="range" min="0" max="4" step="0.1" value="1.8" id="s-fee"></div>
-    <div class="srow"><div class="slbls"><span id="l-esc">Year 2 cost escalation</span><span id="d-esc">10%</span></div><input type="range" min="0" max="20" step="1" value="10" id="s-esc"></div>
+    <div class="phead">
+      <div class="lbl-wrap">
+        <label class="switch"><input type="checkbox" id="tc-fric" checked onchange="toggleCat('fric', this.checked)"><span class="tslider"></span></label>
+        <span class="ptitle" id="l-fric">Financial Frictions & Owner</span>
+      </div>
+      <span class="ptotal negc"><span id="pt-fric">—</span></span>
+    </div>
+    <div class="srow" id="r-od"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-od" checked><span class="tslider"></span></label><span id="l-od">Owner draw (COP M/mo)</span></span><span id="d-od">2.0M</span></div><input type="range" min="0" max="10" step="0.5" value="2.0" id="s-od"></div>
+    <div class="srow" id="r-tax"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-tax" checked><span class="tslider"></span></label><span id="l-tax">Taxes (% gross rev)</span></span><span id="d-tax">4.0%</span></div><input type="range" min="0" max="10" step="0.5" value="4.0" id="s-tax"></div>
+    <div class="srow" id="r-fee"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-fee" checked><span class="tslider"></span></label><span id="l-fee">Payment fees (2.5% on 70% vol)</span></span><span id="d-fee">1.8%</span></div><input type="range" min="0" max="4" step="0.1" value="1.8" id="s-fee"></div>
+    <div class="srow" id="r-esc"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-esc" checked><span class="tslider"></span></label><span id="l-esc">Year 2 cost escalation</span></span><span id="d-esc">10%</span></div><input type="range" min="0" max="20" step="1" value="10" id="s-esc"></div>
   </div>
 
   <div class="panel ops">
-    <div class="phead"><span class="ptitle" id="l-crew">Payroll & Operations</span><span class="ptotal negc" style="color:#60a5fa"><span id="pt-ops">—</span></span></div>
-    <div class="srow"><div class="slbls"><span id="l-rnt">Monthly Rent (COP M)</span><span id="d-rnt">8.0M</span></div><input type="range" min="2" max="20" step="0.5" value="8.0" id="s-rnt"></div>
-    <div class="srow"><div class="slbls"><span id="l-hc">Head coach / setter (COP M)</span><span id="d-hc">2.5M</span></div><input type="range" min="1.8" max="4" step="0.1" value="2.5" id="s-hc"></div>
-    <div class="srow"><div class="slbls"><span id="l-fd">Front desk & admin (COP M)</span><span id="d-fd">1.6M</span></div><input type="range" min="1.4" max="3.5" step="0.1" value="1.6" id="s-fd"></div>
-    <div class="srow"><div class="slbls"><span id="l-cl">Cleaning/Maint. (COP M)</span><span id="d-cl">1.0M</span></div><input type="range" min="0" max="2" step="0.1" value="1.0" id="s-cl"></div>
-    <div class="srow"><div class="slbls"><span id="l-pf">Prestaciones multiplier</span><span id="d-pf">1.50×</span></div><input type="range" min="1.35" max="1.65" step="0.01" value="1.50" id="s-pf"></div>
-    <div class="srow"><div class="slbls"><span id="l-el">Electricity & Utilities (COP M)</span><span id="d-el">2.6M</span></div><input type="range" min="1" max="5" step="0.1" value="2.6" id="s-el"></div>
-    <div class="srow"><div class="slbls"><span id="l-hm">Fixed overhead (Ins, Mktg, Acc)</span><span id="d-hm">2.0M</span></div><input type="range" min="0.5" max="5" step="0.1" value="2.0" id="s-hm"></div>
+    <div class="phead">
+      <div class="lbl-wrap">
+        <label class="switch"><input type="checkbox" id="tc-ops" checked onchange="toggleCat('ops', this.checked)"><span class="tslider"></span></label>
+        <span class="ptitle" id="l-crew">Payroll & Operations</span>
+      </div>
+      <span class="ptotal negc" style="color:#60a5fa"><span id="pt-ops">—</span></span>
+    </div>
+    <div class="srow" id="r-rnt"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-rnt" checked><span class="tslider"></span></label><span id="l-rnt">Monthly Rent (COP M)</span></span><span id="d-rnt">8.0M</span></div><input type="range" min="2" max="20" step="0.5" value="8.0" id="s-rnt"></div>
+    <div class="srow" id="r-hc"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-hc" checked><span class="tslider"></span></label><span id="l-hc">Head coach / setter (COP M)</span></span><span id="d-hc">2.5M</span></div><input type="range" min="1.8" max="4" step="0.1" value="2.5" id="s-hc"></div>
+    <div class="srow" id="r-fd"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-fd" checked><span class="tslider"></span></label><span id="l-fd">Front desk & admin (COP M)</span></span><span id="d-fd">1.6M</span></div><input type="range" min="1.4" max="3.5" step="0.1" value="1.6" id="s-fd"></div>
+    <div class="srow" id="r-cl"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-cl" checked><span class="tslider"></span></label><span id="l-cl">Cleaning/Maint. (COP M)</span></span><span id="d-cl">1.0M</span></div><input type="range" min="0" max="2" step="0.1" value="1.0" id="s-cl"></div>
+    <div class="srow" id="r-pf"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-pf" checked><span class="tslider"></span></label><span id="l-pf">Prestaciones multiplier</span></span><span id="d-pf">1.50×</span></div><input type="range" min="1.35" max="1.65" step="0.01" value="1.50" id="s-pf"></div>
+    <div class="srow" id="r-el"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-el" checked><span class="tslider"></span></label><span id="l-el">Electricity & Utilities (COP M)</span></span><span id="d-el">2.6M</span></div><input type="range" min="1" max="5" step="0.1" value="2.6" id="s-el"></div>
+    <!-- MVP Label & Default Update: Fixed Ops & CapEx -->
+    <div class="srow" id="r-hm"><div class="slbls"><span class="lbl-wrap"><label class="switch"><input type="checkbox" id="t-hm" checked><span class="tslider"></span></label><span id="l-hm">Fixed Ops & CapEx (Ins, Mktg, Holds)</span></span><span id="d-hm">3.5M</span></div><input type="range" min="1.0" max="8" step="0.1" value="3.5" id="s-hm"></div>
   </div>
 
 </div>
@@ -200,38 +257,27 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px
 
 <script>
 const g = id => document.getElementById(id);
-// Dark mode optimized semantic colors
 const C = { 
-  mem: '#34d399',      // Neon Emerald
-  youth: '#fb923c',    // Bright Orange
-  course: '#fcd34d',   // Warm Yellow
-  dp: '#38bdf8',       // Light Sky Blue
-  cafe: '#f472b6',     // Pink
-  pay: '#fb7185',      // Rose (Costs)
-  util: '#60a5fa',     // Blue
-  fric: '#e11d48',     // Deep Red
-  fnd: '#a78bfa',      // Purple
-  rent: '#94a3b8',     // Slate
-  warn: '#fbbf24',     // Amber
-  text: '#cbd5e1',     // Slate-300
-  grid: 'rgba(255, 255, 255, 0.05)'
+  mem: '#34d399', youth: '#fb923c', course: '#fcd34d', dp: '#38bdf8', cafe: '#f472b6', 
+  pay: '#fb7185', util: '#60a5fa', fric: '#e11d48', fnd: '#a78bfa', rent: '#94a3b8', 
+  warn: '#fbbf24', text: '#cbd5e1', grid: 'rgba(255, 255, 255, 0.05)'
 };
 let lang = 'en';
 let globalCSVData = [];
 
 const i18n = {
   en: {
-    title: 'Climbing Gym — Model v7',
+    title: 'Climbing Gym — Model v8',
     m24:'Members @ Mo 24', rev:'Revenue @ Mo 24', ebitda:'EBITDA Margin', be:'Break-even', draw:'Max Drawdown', net:'Net Inc @ Mo 24',
     adult:'Base Memberships', fnd:'Founders (Locked Capacity)', yth:'Term-Based Youth & Camps', oth:'Ancillary', cap:'Capital & Seasonality', fric:'Financial Frictions & Owner', crew:'Payroll & Operations',
     rm:'Revenue Mix @ Mo 24', cm:'Cost Mix @ Mo 24', proj:'24-Mo Cumulative Cash Flow (COP M) — Opens March',
     sm:'Starting members', nm:'New members / month', ch:'Monthly churn (CWA baseline)', mp:'Price (COP k/mo)', pmx:'Prepaid mix (Qtr/Ann)', pdi:'Prepaid effective discount',
     fm:'Founder count', fup:'Upfront fee (COP k)', flk:'Locked rate (COP k/mo)',
-    yk:'Kids / term', yp:'Term fee (COP k/term)', ycp:'Camp revenue (COP M/camp mo)',
+    yk:'Kids / term', yp:'Term fee (COP k/term)', ycp:'Camp revenue (COP M/mo)',
     dp:'Day passes / mo', dpp:'Day pass price (COP k)', cat:'Café attachment (% of visits)', csp:'Café gross profit / visit (COP k)', c:'Courses / mo', cp:'Course price (COP k)',
     bc:'Build cost (COP M)', pob:'Pre-opening burn (COP M)', vac:'Vacation dip (Dec/Jan)',
     od:'Owner draw (COP M/mo)', tax:'Taxes (% gross rev)', fee:'Payment fees (2.5% on 70% vol)', esc:'Year 2 cost escalation',
-    rnt:'Monthly Rent (COP M)', hc:'Head coach / setter (COP M)', fd:'Front desk & admin (COP M)', cl:'Cleaning/Maint. (COP M)', pf:'Prestaciones multiplier', el:'Electricity & Utilities (COP M)', hm:'Fixed overhead (Ins, Mktg, Acc)',
+    rnt:'Monthly Rent (COP M)', hc:'Head coach / setter (COP M)', fd:'Front desk & admin (COP M)', cl:'Cleaning/Maint. (COP M)', pf:'Prestaciones multiplier', el:'Electricity & Utilities (COP M)', hm:'Fixed Ops & CapEx (Ins, Mktg, Holds)',
     fndnote:'Founders offset build cost upfront, but consume capacity at a locked discount forever.',
     ythnote:'Terms: Feb-Jun & Aug-Nov. Camps: Jul, Dec, Jan.',
     l_mem:'Base', l_fnd:'Founders', l_yth:'Youth', l_oth:'Pass/Course', l_caf:'Café',
@@ -239,7 +285,7 @@ const i18n = {
     btn_cons:'Conservative', btn_base:'Base Case', btn_opt:'Optimistic'
   },
   es: {
-    title: 'Gimnasio de Escalada — Modelo v7',
+    title: 'Gimnasio de Escalada — Modelo v8',
     m24:'Miembros @ Mes 24', rev:'Ingresos @ Mes 24', ebitda:'Margen EBITDA', be:'Punto Equilibrio', draw:'Agujero Máximo', net:'Neto @ Mes 24',
     adult:'Membresías Base', fnd:'Fundadores (Capacidad Fija)', yth:'Juvenil por Ciclos y Vacaciones', oth:'Adicionales', cap:'Capital y Estacionalidad', fric:'Fricción Financiera y Dueño', crew:'Nómina y Operaciones',
     rm:'Mix Ingresos @ Mes 24', cm:'Mix Costos @ Mes 24', proj:'Flujo de Caja Acumulado (24 Meses) — Apertura Marzo',
@@ -249,7 +295,7 @@ const i18n = {
     dp:'Pases diarios / mes', dpp:'Precio pase (COP k)', cat:'Conversión café (% visitas)', csp:'Utilidad café / visita (COP k)', c:'Cursos / mes', cp:'Precio curso (COP k)',
     bc:'Costo construcción (COP M)', pob:'Quema pre-apertura (COP M)', vac:'Baja vacacional (Dic/Ene)',
     od:'Retiro dueño (COP M/mes)', tax:'Impuestos (% ingr. bruto)', fee:'Comisión TC (2.5% al 70%)', esc:'Inflación costos Año 2',
-    rnt:'Alquiler mensual (COP M)', hc:'Entrenador jefe (COP M)', fd:'Recepción y admin (COP M)', cl:'Aseo/Mantenimiento (COP M)', pf:'Multiplicador prestaciones', el:'Electricidad y Serv. (COP M)', hm:'Gastos fijos (Seguro, Mktg)',
+    rnt:'Alquiler mensual (COP M)', hc:'Entrenador jefe (COP M)', fd:'Recepción y admin (COP M)', cl:'Aseo/Mantenimiento (COP M)', pf:'Multiplicador prestaciones', el:'Electricidad y Serv. (COP M)', hm:'Fijos y CapEx (Seg, Mktg, Presas)',
     fndnote:'Los fundadores reducen el costo inicial, pero ocupan capacidad con descuento de por vida.',
     ythnote:'Ciclos: Feb-Jun y Ago-Nov. Vacaciones: Jul, Dic, Ene.',
     l_mem:'Base', l_fnd:'Fundad.', l_yth:'Juv', l_oth:'Pase/Curso', l_caf:'Café',
@@ -283,11 +329,11 @@ function setLang(l) {
   run();
 }
 
-// Preset Definitions
+// Preset Definitions (Updated with 3.5M base for CapEx/Hm)
 const presets = {
-  cons: { 's-sm':30, 's-nm':10, 's-ch':10, 's-rnt':12, 's-bc':450, 's-pob':40, 's-pmx':10, 's-yk':15, 's-fm':10 },
-  base: { 's-sm':50, 's-nm':15, 's-ch':7.5, 's-rnt':8, 's-bc':400, 's-pob':20, 's-pmx':20, 's-yk':25, 's-fm':15 },
-  opt:  { 's-sm':80, 's-nm':25, 's-ch':5,  's-rnt':6, 's-bc':350, 's-pob':15, 's-pmx':30, 's-yk':40, 's-fm':25 }
+  cons: { 's-sm':30, 's-nm':10, 's-ch':10, 's-rnt':12, 's-bc':450, 's-pob':40, 's-pmx':10, 's-yk':15, 's-fm':10, 's-hm':4.0 },
+  base: { 's-sm':50, 's-nm':15, 's-ch':7.5, 's-rnt':8, 's-bc':400, 's-pob':20, 's-pmx':20, 's-yk':25, 's-fm':15, 's-hm':3.5 },
+  opt:  { 's-sm':80, 's-nm':25, 's-ch':5,  's-rnt':6, 's-bc':350, 's-pob':15, 's-pmx':30, 's-yk':40, 's-fm':25, 's-hm':2.5 }
 };
 
 function setScenario(type) {
@@ -304,7 +350,24 @@ function setScenario(type) {
   }
 }
 
-// Global Chart configurations for Dark Mode
+// Category Toggle Logic
+function toggleCat(panelClass, state) {
+  const panel = document.querySelector('.panel.' + panelClass);
+  if(!panel) return;
+  const checks = panel.querySelectorAll('.srow input[type="checkbox"]');
+  checks.forEach(chk => { 
+      chk.checked = state; 
+      toggleRowDim(chk.id.replace('t-', 'r-'), state);
+  });
+  run();
+}
+
+// Visual Dimming for Toggled Rows
+function toggleRowDim(rowId, state) {
+    const row = g(rowId);
+    if(row) { state ? row.classList.remove('disabled') : row.classList.add('disabled'); }
+}
+
 Chart.defaults.color = C.text;
 Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 
@@ -341,15 +404,23 @@ let pChart = new Chart(g('pc'), {
 
 function fmtM(x){ return '$'+(x/1e6).toFixed(1)+'M'; }
 
+// Helper to pull slider value OR default if toggled off
+function getV(id, defaultIfOff = 0) {
+  const chk = g('t-' + id);
+  if (chk && !chk.checked) return defaultIfOff;
+  return +g('s-' + id).value;
+}
+
 function run() {
   const v = {
-    sm:+g('s-sm').value, nm:+g('s-nm').value, ch:+g('s-ch').value, mp:+g('s-mp').value, pmx:+g('s-pmx').value, pdi:+g('s-pdi').value,
-    fm:+g('s-fm').value, fup:+g('s-fup').value, flk:+g('s-flk').value,
-    yk:+g('s-yk').value, yp:+g('s-yp').value, ycp:+g('s-ycp').value,
-    dp:+g('s-dp').value, dpp:+g('s-dpp').value, cat:+g('s-cat').value, csp:+g('s-csp').value, c:+g('s-c').value, cp:+g('s-cp').value,
-    bc:+g('s-bc').value, pob:+g('s-pob').value, vac:+g('s-vac').value,
-    od:+g('s-od').value, tax:+g('s-tax').value, fee:+g('s-fee').value, esc:+g('s-esc').value,
-    rnt:+g('s-rnt').value, hc:+g('s-hc').value, fd:+g('s-fd').value, cl:+g('s-cl').value, pf:+g('s-pf').value, el:+g('s-el').value, hm:+g('s-hm').value
+    sm: getV('sm'), nm: getV('nm'), ch: getV('ch'), mp: getV('mp'), pmx: getV('pmx'), pdi: getV('pdi'),
+    fm: getV('fm'), fup: getV('fup'), flk: getV('flk'),
+    yk: getV('yk'), yp: getV('yp'), ycp: getV('ycp'),
+    dp: getV('dp'), dpp: getV('dpp'), cat: getV('cat'), csp: getV('csp'), c: getV('c'), cp: getV('cp'),
+    bc: getV('bc'), pob: getV('pob'), vac: getV('vac', 100), // Default to 100 (no dip) if OFF
+    od: getV('od'), tax: getV('tax'), fee: getV('fee'), esc: getV('esc'),
+    rnt: getV('rnt'), hc: getV('hc'), fd: getV('fd'), cl: getV('cl'), pf: getV('pf', 1.0), // Default 1x multiplier if OFF
+    el: getV('el'), hm: getV('hm')
   };
   const t = i18n[lang];
 
@@ -389,14 +460,19 @@ function run() {
 
     const totalRev = rReg + rFnd + rYth + rOth + rCaf;
 
-    const payroll = (v.hc + v.fd + v.cl) * v.pf * y2f * 1e6;
+    // MVP Auto-Hire Logic: Triggers extra 1.5M when passing 250 members
+    const totalMembers = regMembers + v.fm;
+    const autoHireBonus = totalMembers > 250 ? 1.5 : 0;
+
+    const payroll = (v.hc + v.fd + v.cl + autoHireBonus) * v.pf * y2f * 1e6;
     const ops = (v.el + v.hm) * y2f * 1e6;
     const rent = v.rnt * y2f * 1e6;
     const fric = totalRev * (v.tax/100 + v.fee/100);
     const owner = v.od * 1e6;
     
     const totalCost = payroll + ops + rent + fric + owner;
-    const ebitda = totalRev - payroll - ops - rent; 
+    // EBITDA pre-tax, pre-owner
+    const ebitda = totalCost > 0 ? (totalRev - payroll - ops - rent) : 0; 
     const net = totalRev - totalCost;
 
     cum += net;
@@ -407,7 +483,7 @@ function run() {
     
     globalCSVData.push({
       month: m + 1,
-      total_members: Math.round(regMembers + v.fm),
+      total_members: Math.round(totalMembers),
       revenue: totalRev,
       payroll: payroll,
       rent: rent,
@@ -420,7 +496,7 @@ function run() {
     });
 
     if (m === 23) {
-      snap = { rev: totalRev, net, ebitdaMargin: (ebitda/totalRev)*100, 
+      snap = { rev: totalRev, net, ebitdaMargin: totalRev>0 ? (ebitda/totalRev)*100 : 0, 
                mix: [rReg, rFnd, rYth, rOth, rCaf],
                cost: totalCost, cmix: [payroll, ops, rent, owner, fric] };
     }
@@ -435,7 +511,7 @@ function run() {
   
   const em = Math.round(snap.ebitdaMargin);
   g('v-ebitda').textContent = em + '%';
-  g('v-ebitda').className = 'mval ' + (em > 30 ? 'warn' : ''); 
+  g('v-ebitda').className = 'mval ' + (em > 30 || em < 0 ? 'warn' : ''); 
 
   g('v-draw').textContent = '-'+fmtM(Math.abs(maxDrawdown));
   g('v-draw').style.color = C.fric;
@@ -500,13 +576,14 @@ function exportCSV() {
   const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
   link.setAttribute("href", url);
-  link.setAttribute("download", "climbing_gym_forecast_v7_dark.csv");
+  link.setAttribute("download", "climbing_gym_forecast_v8_pitch.csv");
   link.style.visibility = 'hidden';
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
 }
 
+// Initialize Slider and Toggle Listeners
 const sliderMap = {
   's-sm':['d-sm',v=>v], 's-nm':['d-nm',v=>v], 's-ch':['d-ch',v=>v+'%'], 's-mp':['d-mp',v=>v+'k'], 's-pmx':['d-pmx',v=>v+'%'], 's-pdi':['d-pdi',v=>v+'%'],
   's-fm':['d-fm',v=>v], 's-fup':['d-fup',v=>v+'k'], 's-flk':['d-flk',v=>v+'k'],
@@ -516,9 +593,31 @@ const sliderMap = {
   's-od':['d-od',v=>parseFloat(v).toFixed(1)+'M'], 's-tax':['d-tax',v=>parseFloat(v).toFixed(1)+'%'], 's-fee':['d-fee',v=>parseFloat(v).toFixed(1)+'%'], 's-esc':['d-esc',v=>v+'%'],
   's-rnt':['d-rnt',v=>parseFloat(v).toFixed(1)+'M'], 's-hc':['d-hc',v=>parseFloat(v).toFixed(1)+'M'], 's-fd':['d-fd',v=>parseFloat(v).toFixed(1)+'M'], 's-cl':['d-cl',v=>parseFloat(v).toFixed(1)+'M'], 's-pf':['d-pf',v=>parseFloat(v).toFixed(2)+'×'], 's-el':['d-el',v=>parseFloat(v).toFixed(1)+'M'], 's-hm':['d-hm',v=>parseFloat(v).toFixed(1)+'M']
 };
+
 Object.entries(sliderMap).forEach(([sid,[did,fmt]])=>{
-  const el=g(sid);
-  el.addEventListener('input',()=>{ g(did).textContent=fmt(el.value); run(); });
+  const el = g(sid);
+  const chk = g(sid.replace('s-', 't-'));
+  
+  // Slider dragging updates logic
+  el.addEventListener('input', () => { 
+      g(did).textContent = fmt(el.value); 
+      run(); 
+  });
+  
+  // Individual Toggle switches update logic and dimming
+  if(chk) {
+      chk.addEventListener('change', (e) => {
+          toggleRowDim('r-' + sid.replace('s-', ''), e.target.checked);
+          
+          // Re-sync Category Toggle if any individual switches move
+          const catToggle = e.target.closest('.panel').querySelector('.phead input[type="checkbox"]');
+          const allChecks = Array.from(e.target.closest('.panel').querySelectorAll('.srow input[type="checkbox"]'));
+          const allOn = allChecks.every(c => c.checked);
+          if (catToggle) catToggle.checked = allOn;
+          
+          run();
+      });
+  }
 });
 run();
 </script>
